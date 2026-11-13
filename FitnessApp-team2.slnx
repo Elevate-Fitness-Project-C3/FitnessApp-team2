@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="../BuildingBlocks/BuildingBlocks.csproj" Id="a6a764ab-16c9-4030-a949-11270b400ab0" />
+  <Project Path="BuildingBlocks/BuildingBlocks.csproj" Id="6e7445c0-2d5e-4c2d-84cb-d426c5f6223f" />
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>
