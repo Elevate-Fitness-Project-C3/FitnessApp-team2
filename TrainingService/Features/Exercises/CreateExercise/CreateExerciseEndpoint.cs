@@ -17,7 +17,7 @@ public static class CreateExerciseEndpoint
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            // 1. Validate request (returns HttpValidationProblemDetails)
+            // 1. Validate request (returns RFC 7807 HttpValidationProblemDetails)
             var validationResult = await validator.ValidateAsync(command, cancellationToken);
             if (!validationResult.IsValid)
             {
@@ -27,7 +27,7 @@ public static class CreateExerciseEndpoint
             // 2. Dispatch command to MediatR handler
             var result = await sender.Send(command, cancellationToken);
 
-            // 3. Handle conflict (returns ProblemDetails for 409 Conflict)
+            // 3. Handle conflict (returns RFC 7807 ProblemDetails for 409 Conflict)
             if (result.IsConflict)
             {
                 return Results.Problem(
@@ -39,7 +39,7 @@ public static class CreateExerciseEndpoint
             }
 
             // 4. Return 201 Created
-            return Results.Created($"/api/v1/exercises/{result.Data!.Id}", result.Data);
+            return Results.Created($"/api/v1/exercises/{result.Value!.Id}", result.Value);
         })
         .WithName("CreateExercise")
         .WithSummary("Create a new exercise definition")

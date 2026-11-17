@@ -2,18 +2,19 @@ namespace TrainingService.Features.Exercises.DeactivateExercise;
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Common.Results;
 using TrainingService.Data;
 
 public class DeactivateExerciseCommandHandler(TrainingDbContext dbContext)
-    : IRequestHandler<DeactivateExerciseCommand, DeactivateExerciseResult>
+    : IRequestHandler<DeactivateExerciseCommand, Result>
 {
-    public async Task<DeactivateExerciseResult> Handle(
+    public async Task<Result> Handle(
         DeactivateExerciseCommand command,
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
 
-        // Direct single-roundtrip database UPDATE via ExecuteUpdateAsync
+        // Direct single-roundtrip database UPDATE via ExecuteUpdateAsync (TR-A01 / AC 02 & AC 03)
         var affectedRows = await dbContext.Exercises
             .Where(e => e.Id == command.Id)
             .ExecuteUpdateAsync(s => s
@@ -23,10 +24,10 @@ public class DeactivateExerciseCommandHandler(TrainingDbContext dbContext)
 
         if (affectedRows == 0)
         {
-            return DeactivateExerciseResult.NotFound(
+            return Result.NotFound(
                 $"Exercise with ID '{command.Id}' was not found in the catalog.");
         }
 
-        return DeactivateExerciseResult.Success();
+        return Result.Success();
     }
 }

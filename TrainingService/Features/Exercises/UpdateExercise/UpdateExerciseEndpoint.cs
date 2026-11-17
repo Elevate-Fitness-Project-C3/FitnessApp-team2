@@ -59,7 +59,7 @@ public static class UpdateExerciseEndpoint
             }
 
             // 5. Return 200 OK with updated exercise
-            return Results.Ok(result.Data);
+            return Results.Ok(result.Value);
         })
         .WithName("UpdateExercise")
         .WithSummary("Update permitted descriptive fields of an exercise")

@@ -2,17 +2,18 @@ namespace TrainingService.Features.Exercises.CreateExercise;
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Common.Results;
 using TrainingService.Data;
 using TrainingService.Domain.Entities;
 
 public class CreateExerciseCommandHandler(TrainingDbContext dbContext)
-    : IRequestHandler<CreateExerciseCommand, CreateExerciseResult>
+    : IRequestHandler<CreateExerciseCommand, Result<ExerciseResponse>>
 {
-    public async Task<CreateExerciseResult> Handle(
+    public async Task<Result<ExerciseResponse>> Handle(
         CreateExerciseCommand command,
         CancellationToken cancellationToken)
     {
-        // 1. Enforce case-insensitive name uniqueness
+        // 1. Enforce case-insensitive name uniqueness (TR-A01 / AC 01)
         var trimmedName = command.Name.Trim();
         var normalizedName = trimmedName.ToUpper();
 
@@ -21,7 +22,7 @@ public class CreateExerciseCommandHandler(TrainingDbContext dbContext)
 
         if (exists)
         {
-            return CreateExerciseResult.Conflict(
+            return Result<ExerciseResponse>.Conflict(
                 $"An exercise with the name '{trimmedName}' already exists in the catalog.");
         }
 
@@ -47,6 +48,6 @@ public class CreateExerciseCommandHandler(TrainingDbContext dbContext)
             exercise.CreatedAtUtc,
             exercise.UpdatedAtUtc);
 
-        return CreateExerciseResult.Success(response);
+        return Result<ExerciseResponse>.Success(response);
     }
 }

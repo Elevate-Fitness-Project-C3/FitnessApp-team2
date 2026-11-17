@@ -2,25 +2,26 @@ namespace TrainingService.Features.Exercises.UpdateExercise;
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Common.Results;
 using TrainingService.Data;
 
 public class UpdateExerciseCommandHandler(TrainingDbContext dbContext)
-    : IRequestHandler<UpdateExerciseCommand, UpdateExerciseResult>
+    : IRequestHandler<UpdateExerciseCommand, Result<ExerciseResponse>>
 {
-    public async Task<UpdateExerciseResult> Handle(
+    public async Task<Result<ExerciseResponse>> Handle(
         UpdateExerciseCommand command,
         CancellationToken cancellationToken)
     {
         var trimmedName = command.Name.Trim();
         var normalizedName = trimmedName.ToUpper();
 
-        // 1. Check for name conflict with other exercises
+        // 1. Check for name conflict with other exercises (TR-A01 / AC 01 & AC 02)
         var nameConflict = await dbContext.Exercises
             .AnyAsync(e => e.Name.ToUpper() == normalizedName && e.Id != command.Id, cancellationToken);
 
         if (nameConflict)
         {
-            return UpdateExerciseResult.Conflict(
+            return Result<ExerciseResponse>.Conflict(
                 $"An exercise with the name '{trimmedName}' already exists in the catalog.");
         }
 
@@ -38,7 +39,7 @@ public class UpdateExerciseCommandHandler(TrainingDbContext dbContext)
 
         if (affectedRows == 0)
         {
-            return UpdateExerciseResult.NotFound(
+            return Result<ExerciseResponse>.NotFound(
                 $"Exercise with ID '{command.Id}' was not found in the catalog.");
         }
 
@@ -57,6 +58,6 @@ public class UpdateExerciseCommandHandler(TrainingDbContext dbContext)
                 e.UpdatedAtUtc))
             .FirstOrDefaultAsync(cancellationToken);
 
-        return UpdateExerciseResult.Success(updatedExercise!);
+        return Result<ExerciseResponse>.Success(updatedExercise!);
     }
 }
