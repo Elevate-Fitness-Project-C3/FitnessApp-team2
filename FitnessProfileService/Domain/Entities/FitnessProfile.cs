@@ -14,12 +14,12 @@ namespace FitnessProfileService.Domain.Entities
         public TrainingExperienceLevel? TrainingExperienceLevel { get; set; }
         [Range(1,7)]
         public int? AvailableDaysPerWeek { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-        public DateTime? UpdatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
 
         // Navigation Property
-        //public ICollection<BodyMeasurement> BodyMeasurements { get; set; } = [];
+        public ICollection<BodyMeasurement> BodyMeasurements { get; set; } = [];
      
 
 

@@ -37,10 +37,10 @@ namespace FitnessProfileService.Common.Configurations
 
 
             // Relationship
-            //builder.HasMany(fp => fp.BodyMeasurements)
-            //    .WithOne(bm => bm.FitnessProfile)
-            //    .HasForeignKey(bm => bm.UserId)
-            //    .OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(fp => fp.BodyMeasurements)
+                .WithOne(bm => bm.FitnessProfile)
+                .HasForeignKey(bm => bm.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -11,7 +11,7 @@
 
         public decimal WeightKg { get; set; }
 
-        public DateTime RecordedAt { get; set; }
+        public DateTimeOffset RecordedAt { get; set; }= DateTimeOffset.UtcNow;
 
         // Navigation Property
         public FitnessProfile FitnessProfile { get; set; } = null!;

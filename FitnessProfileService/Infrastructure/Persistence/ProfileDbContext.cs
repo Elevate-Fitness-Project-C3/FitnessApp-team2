@@ -11,9 +11,9 @@ namespace FitnessProfileService.Infrastructure.Persistence
         {
         }
 
-        //public DbSet<FitnessProfile> FitnessProfiles { get; set; }
+        public DbSet<FitnessProfile> FitnessProfiles { get; set; }
 
-        //public DbSet<BodyMeasurement> BodyMeasurements {  get; set; }
+        public DbSet<BodyMeasurement> BodyMeasurements {  get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
