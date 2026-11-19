@@ -4,6 +4,8 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
+        "sqlserver": "StartWithoutDebugging",
+        "rabbitmq": "StartWithoutDebugging",
         "fitnessprofileservice": "StartDebugging"
       }
     }

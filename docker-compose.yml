@@ -1,6 +1,40 @@
 services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    hostname: gym-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SQL_SERVER_PASSWORD:?Set SQL_SERVER_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:14330:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$${MSSQL_SA_PASSWORD}\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: gym-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: gym
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-gym-dev-password}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
   fitnessprofileservice:
     image: ${DOCKER_REGISTRY-}fitnessprofileservice
     build:
       context: .
       dockerfile: FitnessProfileService/Dockerfile
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
