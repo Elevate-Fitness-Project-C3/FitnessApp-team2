@@ -12,7 +12,6 @@ if (builder.Environment.IsDevelopment())
 }
 
 builder.Services.AddOpenApi();
-builder.AddIdentityService();
 
 var app = builder.Build();
 

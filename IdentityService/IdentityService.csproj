@@ -23,11 +23,17 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Features\Register\Commands\" />
+    <Folder Include="Features\Register\DTOs\" />
+    <Folder Include="Features\Register\Handlers\" />
+    <Folder Include="Features\Register\Notifications\" />
   </ItemGroup>
 
 </Project>
