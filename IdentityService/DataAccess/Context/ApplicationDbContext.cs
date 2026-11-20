@@ -12,6 +12,8 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
     public DbSet<EmailVerificationCode> EmailVerificationCodes => Set<EmailVerificationCode>();
 
+    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

@@ -1,54 +1,43 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using IdentityService.Features.Login.ViewModels;
 using Microsoft.IdentityModel.Tokens;
-using static IdentityService.Services.JwtServices.ITokenService;
 
-namespace IdentityService.Services.JwtServices
+namespace IdentityService.Services.JwtServices;
+
+public sealed class TokenService(JwtOptions options, TimeProvider clock) : ITokenService
 {
-    public class TokenService : ITokenService
+    public LoginSessionViewModel GenerateTokens(
+        string userId, string email, IEnumerable<string> roles, DateTimeOffset? refreshExpiresAtUtc = null)
     {
-        private readonly JwtOptions _options;
-
-        public TokenService(JwtOptions options)
+        // JWT time claims have whole-second precision.
+        var now = DateTimeOffset.FromUnixTimeSeconds(clock.GetUtcNow().ToUnixTimeSeconds());
+        var accessExpiresAt = now.AddMinutes(options.DurationInMinutes);
+        var claims = new List<Claim>
         {
-            _options = options;
-        }
-        public TokenResult GenerateTokens(string userId, string email, IEnumerable<string> roles)
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
+        };
+        claims.AddRange(roles.Select(role => new Claim("roles", role)));
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.SecretKey));
+        var jwt = new JwtSecurityToken(
+            issuer: options.Issuer,
+            audience: options.Audience,
+            claims: claims,
+            notBefore: now.UtcDateTime,
+            expires: accessExpiresAt.UtcDateTime,
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+
+        return new LoginSessionViewModel
         {
-            // expirationss 
-            var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_options.DurationInMinutes);
-            // claims 
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim(JwtRegisteredClaimNames.Email,email),
-                new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()), // توقيع خاص للتوكين 
-              
-            };
-
-            foreach(var role in roles)
-            {
-                claims.Add(new Claim("roles", role));
-            }
-
-            // 3. تجهيز المفتاح وطريقة توقيع الـ JWT
-            var signingCredentials = new SigningCredentials
-              (new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey)), SecurityAlgorithms.HmacSha256);
-
-            // 4. إنشاء الـ JWT
-            var jwt = new JwtSecurityToken(
-                issuer: _options.Issuer,
-                audience: _options.Audience,
-                claims: claims,
-                notBefore: DateTimeOffset.Now.UtcDateTime,
-                expires: accessTokenExpiresAt,
-                signingCredentials: signingCredentials);
-
-            // 5. تحويل الـ JWT إلى الكود الذي سيُرسل للعميل
-            var tokenHandler = new JwtSecurityTokenHandler().WriteToken(jwt);
-
-            return new TokenResult(AccessToken: tokenHandler, ExpiresIn: accessTokenExpiresAt);
-        }
+            AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
+            AccessTokenExpiresAtUtc = accessExpiresAt,
+            RefreshToken = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(32)),
+            RefreshTokenExpiresAtUtc = refreshExpiresAtUtc ?? now.AddDays(options.RefreshDurationInDays)
+        };
     }
 }

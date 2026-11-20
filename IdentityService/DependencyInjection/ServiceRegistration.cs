@@ -44,13 +44,26 @@ public static class ServiceRegistration
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
             options.SignIn.RequireConfirmedEmail = true;
-        }).AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        }).AddRoles<IdentityRole>()
+          .AddEntityFrameworkStores<ApplicationDbContext>()
+          .AddSignInManager();
 
         services.AddScoped<IEmailSender, EmailSender>();
 
-        // jwt configuration 
         var jwtOption = configuration.GetRequiredSection("Jwt").Get<JwtOptions>()
-         ?? throw new InvalidOperationException("Jwt settings are missing.");
+            ?? throw new InvalidOperationException("Jwt settings are missing.");
+        if (string.IsNullOrWhiteSpace(jwtOption.Issuer) || string.IsNullOrWhiteSpace(jwtOption.Audience) ||
+            jwtOption.DurationInMinutes <= 0 || jwtOption.RefreshDurationInDays <= 0)
+            throw new InvalidOperationException("Configure the JWT issuer, audience and positive token lifetimes.");
+        if (string.IsNullOrWhiteSpace(jwtOption.SecretKey) || Encoding.UTF8.GetByteCount(jwtOption.SecretKey) < 32)
+            throw new InvalidOperationException("Set Jwt:SecretKey to a random signing key of at least 32 bytes.");
+
+        services.AddSingleton(jwtOption);
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ITokenService, TokenService>();
 
         services.AddAuthentication(options =>
         {
@@ -71,8 +84,11 @@ public static class ServiceRegistration
                 ValidAudience = jwtOption.Audience,
 
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = string.IsNullOrEmpty(jwtOption.SecretKey) ? null :
-                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOption.SecretKey)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOption.SecretKey)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+                RoleClaimType = "roles",
+                NameClaimType = "sub",
 
                 ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
             };

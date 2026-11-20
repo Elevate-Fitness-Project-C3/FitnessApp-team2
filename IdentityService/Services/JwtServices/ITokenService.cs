@@ -1,11 +1,9 @@
-namespace IdentityService.Services.JwtServices
+using IdentityService.Features.Login.ViewModels;
+
+namespace IdentityService.Services.JwtServices;
+
+public interface ITokenService
 {
-    public interface ITokenService
-    {
-        TokenResult GenerateTokens(string userId, string email, IEnumerable<string> roles);
-
-        public record TokenResult(string AccessToken, DateTimeOffset ExpiresIn);
-       
-
-    }
+    LoginSessionViewModel GenerateTokens(
+        string userId, string email, IEnumerable<string> roles, DateTimeOffset? refreshExpiresAtUtc = null);
 }

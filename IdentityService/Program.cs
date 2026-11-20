@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using IdentityService.DependencyInjection;
 using IdentityService.Features.Register.Endpoints;
+using IdentityService.Features.Login.Endpoints;
 
 using IdentityService.Messaging;
 
@@ -38,6 +39,7 @@ if (app.Environment.IsDevelopment())
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.EnsureCreatedAsync();
+    await db.ApplyLoginSchemaAsync();
     await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
 }
 
@@ -48,5 +50,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRegisterEndpoint();
+app.MapLoginEndpoint();
+app.MapRefreshEndpoint();
 
 app.Run();
