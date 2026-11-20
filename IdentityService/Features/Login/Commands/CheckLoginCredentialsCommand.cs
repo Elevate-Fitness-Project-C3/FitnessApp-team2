@@ -1,8 +1,6 @@
-using IdentityService.DataAccess.Context;
 using IdentityService.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Features.Login.Commands;
 
@@ -11,10 +9,7 @@ public sealed class CheckLoginCredentialsCommand(string email, string password) 
     public string Email { get; } = email;
     public string Password { get; } = password;
 
-    public sealed class Handler(
-        ApplicationDbContext db,
-        UserManager<ApplicationUser> users,
-        SignInManager<ApplicationUser> signIn) : IRequestHandler<CheckLoginCredentialsCommand, string?>
+    public sealed class Handler(SignInManager<ApplicationUser> signIn) : IRequestHandler<CheckLoginCredentialsCommand, string?>
     {
         private static readonly ApplicationUser DummyUser = new() { FullName = string.Empty };
         private static readonly string DummyHash =
@@ -22,12 +17,8 @@ public sealed class CheckLoginCredentialsCommand(string email, string password) 
 
         public async Task<string?> Handle(CheckLoginCredentialsCommand request, CancellationToken cancellationToken)
         {
-            var normalizedEmail = users.NormalizeEmail(request.Email);
-            // Hold the update lock through the login transaction so simultaneous attempts count in order.
-            var user = await db.Users.FromSqlInterpolated(
-                $"SELECT * FROM [AspNetUsers] WITH (UPDLOCK, ROWLOCK) WHERE [NormalizedEmail] = {normalizedEmail}")
-                .SingleOrDefaultAsync(cancellationToken);
-
+            var users = signIn.UserManager;
+            var user = await users.FindByEmailAsync(request.Email);
             if (user is null || !user.IsEnabled || !user.EmailConfirmed || await users.IsLockedOutAsync(user))
             {
                 users.PasswordHasher.VerifyHashedPassword(DummyUser, DummyHash, request.Password);

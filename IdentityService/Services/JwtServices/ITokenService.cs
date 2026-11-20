@@ -4,6 +4,6 @@ namespace IdentityService.Services.JwtServices;
 
 public interface ITokenService
 {
-    LoginSessionViewModel GenerateTokens(
-        string userId, string email, IEnumerable<string> roles, DateTimeOffset? refreshExpiresAtUtc = null);
+    Task<LoginSessionViewModel?> CreateSessionAsync(string userId, CancellationToken cancellationToken);
+    Task<LoginSessionViewModel?> RefreshSessionAsync(string? refreshToken, CancellationToken cancellationToken);
 }
