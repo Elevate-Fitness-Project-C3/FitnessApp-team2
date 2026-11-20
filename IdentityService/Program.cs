@@ -1,5 +1,11 @@
+using IdentityService.DataAccess.Context;
+using IdentityService.DataAccess.Seeding;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using IdentityService.DependencyInjection;
 using IdentityService.Features.Register.Endpoints;
+
+using IdentityService.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +18,8 @@ if (builder.Environment.IsDevelopment())
 }
 
 builder.Services.AddOpenApi();
+builder.Services.AddRegistrationMessaging(builder.Configuration);
+builder.Services.AddIdentityService(builder.Configuration);
 
 var app = builder.Build();
 
@@ -25,7 +33,13 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.EnsureCreatedAsync();
+    await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
+}
 
 
 app.UseRouting();

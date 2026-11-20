@@ -1,4 +1,4 @@
-﻿namespace IdentityService.Services.JwtServices
+namespace IdentityService.Services.JwtServices
 {
     public interface ITokenService
     {

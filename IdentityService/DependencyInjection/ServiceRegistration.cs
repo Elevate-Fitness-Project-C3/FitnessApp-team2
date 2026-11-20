@@ -1,19 +1,17 @@
+using System.Text;
 using System.Threading.RateLimiting;
-using IdentityService.Common.ResultPattern;
+using Microsoft.AspNetCore.Identity;
+using MediatR;
 using IdentityService.DataAccess;
 using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Repositories;
 using IdentityService.Domain.Entities;
-using IdentityService.Features.Register.Behaviors;
-using IdentityService.Features.Register.Commands;
-using IdentityService.Features.Register.Orchestrators;
 using IdentityService.Features.Register.Validators;
-using IdentityService.Features.Register.ViewModels;
 using IdentityService.Services.Email;
 using IdentityService.Services.JwtServices;
-using MediatR;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.DependencyInjection;
 
@@ -26,6 +24,15 @@ public static class ServiceRegistration
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<UnitOfWork>();
+        services.AddMediatR(typeof(ServiceRegistration).Assembly);
+        services.AddAuthorization();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("registration", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+        });
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
         services.AddIdentityCore<ApplicationUser>(options =>
@@ -37,7 +44,7 @@ public static class ServiceRegistration
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
             options.SignIn.RequireConfirmedEmail = true;
-        }).AddEntityFrameworkStores<ApplicationDbContext>();
+        }).AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
 
         services.AddScoped<IEmailSender, EmailSender>();
 
@@ -64,8 +71,8 @@ public static class ServiceRegistration
                 ValidAudience = jwtOption.Audience,
 
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey( Encoding.UTF8.GetBytes(jwtOption.Key)
-                ),
+                IssuerSigningKey = string.IsNullOrEmpty(jwtOption.SecretKey) ? null :
+                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOption.SecretKey)),
 
                 ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
             };

@@ -4,11 +4,13 @@ using IdentityService.Features.Register.Commands;
 using IdentityService.Features.Register.Notifications;
 using IdentityService.Features.Register.Queries;
 using IdentityService.Features.Register.ViewModels;
+using Gym.Contracts;
+using MassTransit;
 using MediatR;
 
 namespace IdentityService.Features.Register.Orchestrators;
 
-public sealed class RegisterOrchestrator(IMediator mediator, UnitOfWork unitOfWork)
+public sealed class RegisterOrchestrator(IMediator mediator, UnitOfWork unitOfWork, IPublishEndpoint publisher)
     : IRequestHandler<RegisterCommand, RequestResponse<RegisterViewModel>>
 {
     public async Task<RequestResponse<RegisterViewModel>> Handle(
@@ -38,7 +40,7 @@ public sealed class RegisterOrchestrator(IMediator mediator, UnitOfWork unitOfWo
             await mediator.Publish(new SendVerificationEmailNotification(
                 email, verification.Data!.Code, verification.Data.ExpiresAtUtc), cancellationToken);
 
-            await mediator.Publish(new UserRegisteredNotification(userId), cancellationToken);
+            await publisher.Publish(new UserRegistered(userId), cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
             registered = new RegisterViewModel(userId, email, false, "pending");

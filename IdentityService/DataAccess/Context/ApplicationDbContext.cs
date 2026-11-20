@@ -1,3 +1,4 @@
+using MassTransit;
 using IdentityService.Domain.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,9 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.AddInboxStateEntity();
+        builder.AddOutboxMessageEntity();
+        builder.AddOutboxStateEntity();
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
        
     }

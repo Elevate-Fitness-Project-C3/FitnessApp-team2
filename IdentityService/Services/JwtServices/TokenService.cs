@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -14,10 +14,10 @@ namespace IdentityService.Services.JwtServices
         {
             _options = options;
         }
-        public TokenResult GenerateTokens(string userId, string email, IEnumerable<string> roles, Guid? Trainer)
+        public TokenResult GenerateTokens(string userId, string email, IEnumerable<string> roles)
         {
             // expirationss 
-            var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_options.DutrationInMinute);
+            var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_options.DurationInMinutes);
             // claims 
             var claims = new List<Claim>
             {
@@ -38,7 +38,7 @@ namespace IdentityService.Services.JwtServices
 
             // 4. إنشاء الـ JWT
             var jwt = new JwtSecurityToken(
-                issuer: _options.Issure,
+                issuer: _options.Issuer,
                 audience: _options.Audience,
                 claims: claims,
                 notBefore: DateTimeOffset.Now.UtcDateTime,

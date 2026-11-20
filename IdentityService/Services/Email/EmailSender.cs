@@ -4,7 +4,7 @@ using MimeKit;
 
 namespace IdentityService.Services.Email;
 
-public sealed class EmailSender(IConfiguration configuration, ILogger<EmailSender> logger) : IEmailSender
+public sealed class EmailSender(IConfiguration configuration, IHostEnvironment environment, ILogger<EmailSender> logger) : IEmailSender
 {
     public async Task SendEmailAsync(
         string email, string subject, string htmlMessage, CancellationToken cancellationToken)
@@ -19,7 +19,7 @@ public sealed class EmailSender(IConfiguration configuration, ILogger<EmailSende
             var senderName = GetRequiredSetting("SenderName");
             var senderEmail = GetRequiredSetting("SenderEmail");
             var username = configuration["EmailSettings:Username"]?.Trim();
-            var password = GetRequiredSetting("AppPassword");
+            var localInbox = configuration.GetValue<bool>("EmailSettings:LocalInbox") && environment.IsDevelopment();
             var port = configuration.GetValue<int>("EmailSettings:Port");
             if (port is < 1 or > 65535)
                 throw new InvalidOperationException("EmailSettings:Port must be between 1 and 65535.");
@@ -30,10 +30,11 @@ public sealed class EmailSender(IConfiguration configuration, ILogger<EmailSende
             message.Subject = subject;
             message.Body = new BodyBuilder { HtmlBody = htmlMessage }.ToMessageBody();
 
-            var security = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
+            var security = localInbox ? SecureSocketOptions.None : port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
             await client.ConnectAsync(host, port, security, timeout.Token);
-            await client.AuthenticateAsync(
-                string.IsNullOrWhiteSpace(username) ? senderEmail : username, password, timeout.Token);
+            if (!localInbox)
+                await client.AuthenticateAsync(string.IsNullOrWhiteSpace(username) ? senderEmail : username,
+                    GetRequiredSetting("AppPassword"), timeout.Token);
             await client.SendAsync(new SmtpSendRequest(message), timeout.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

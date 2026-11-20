@@ -29,7 +29,41 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
 
+  mailpit:
+    image: axllent/mailpit:v1.27.0
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+  identityservice:
+    build:
+      context: .
+      dockerfile: IdentityService/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__IdentityDatabase: 'Server=sqlserver,1433;Database=gym-idntity;User Id=sa;Password="${SQL_SERVER_PASSWORD}";Encrypt=True;TrustServerCertificate=True'
+      EmailSettings__LocalInbox: "true"
+      EmailSettings__Host: mailpit
+      EmailSettings__Port: 1025
+      EmailSettings__SenderEmail: identity@gym.test
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: gym
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-gym-dev-password}
+      Jwt__SecretKey: ${JWT_SECRET_KEY:-}
+    ports:
+      - "127.0.0.1:5003:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
   fitnessprofileservice:
+    environment:
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: gym
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-gym-dev-password}
     image: ${DOCKER_REGISTRY-}fitnessprofileservice
     build:
       context: .
