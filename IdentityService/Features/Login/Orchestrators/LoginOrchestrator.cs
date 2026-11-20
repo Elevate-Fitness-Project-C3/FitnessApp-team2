@@ -19,16 +19,15 @@ public sealed class LoginOrchestrator(IMediator mediator, UnitOfWork unitOfWork)
         var response = RequestResponse<LoginSessionViewModel>.Fail(
             "Invalid email or password.", StatusCodes.Status401Unauthorized, errorCode: "invalid_credentials");
 
-        // A denied login must still commit Identity's failed-attempt count and any new lockout.
-        await unitOfWork.ExecuteLoginAsync(email, async () =>
+        await unitOfWork.ExecuteAsync(async () =>
         {
-            var userId = await mediator.Send(new CheckLoginCredentialsCommand(email, command.Password), cancellationToken);
-            if (userId is null)
+            var user = await mediator.Send(new CheckLoginCredentialsCommand(email, command.Password), cancellationToken);
+            if (user is null)
                 return;
 
-            response = await mediator.Send(new CreateLoginSessionCommand(userId), cancellationToken);
-            if (response.Success)
-                await unitOfWork.SaveChangesAsync(cancellationToken);
+            var session = await mediator.Send(new CreateLoginSessionCommand(user), cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            response = RequestResponse<LoginSessionViewModel>.Ok(session);
         }, cancellationToken);
 
         return response;

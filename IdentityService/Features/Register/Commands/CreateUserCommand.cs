@@ -19,7 +19,7 @@ public  record CreateUserCommand(string name, string email, string password) : I
                 UserName = Guid.NewGuid().ToString("N"),
                 FullName = command.name.Trim(),
                 Email = command.email.Trim(),
-                EmailConfirmed = false,
+                EmailConfirmed = true,
                 CreatedAtUtc = DateTime.UtcNow,
                 SecurityStamp = Guid.NewGuid().ToString("N"),
                 LockoutEnabled = true

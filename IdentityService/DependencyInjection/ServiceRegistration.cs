@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using MediatR;
+using IdentityService.Features.Login;
 using IdentityService.DataAccess;
 using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Repositories;
@@ -43,7 +44,7 @@ public static class ServiceRegistration
             options.Password.RequireLowercase = false;
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
-            options.SignIn.RequireConfirmedEmail = true;
+            options.SignIn.RequireConfirmedEmail = false;
             options.Lockout.AllowedForNewUsers = true;
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
@@ -64,6 +65,7 @@ public static class ServiceRegistration
         services.AddSingleton(jwtOption);
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<LoginSessions>();
 
         services.AddAuthentication(options =>
         {
