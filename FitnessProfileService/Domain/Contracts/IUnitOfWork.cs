@@ -1,6 +1,6 @@
 ﻿namespace FitnessProfileService.Domain.Contracts
 {
-    internal interface IUnitOfWork
+    public interface IUnitOfWork
     {
          Task ExcuteAsync(Func<Task> action);
         Task AddSavePointAsync(string savePoint);
