@@ -1,0 +1,3 @@
+namespace NutritionService.Features.CalorieTargets.GetDailyCalorieTarget;
+
+public sealed record GetDailyCalorieTargetQuery;
