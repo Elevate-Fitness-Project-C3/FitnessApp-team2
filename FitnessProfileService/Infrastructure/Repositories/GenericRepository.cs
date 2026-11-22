@@ -1,6 +1,7 @@
 ﻿using FitnessProfileService.Domain.Contracts;
 using FitnessProfileService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Linq.Expressions;
 
 namespace FitnessProfileService.Infrastructure.Repositories
@@ -75,5 +76,14 @@ namespace FitnessProfileService.Infrastructure.Repositories
 
             return await _dbSet.CountAsync(criteria, cancellationToken);
         }
+
+       
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            var result = await _context.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+
     }
-    }
+}
