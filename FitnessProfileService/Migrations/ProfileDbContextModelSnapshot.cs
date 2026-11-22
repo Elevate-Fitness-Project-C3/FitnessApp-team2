@@ -61,7 +61,7 @@ namespace FitnessProfileService.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ActivityLevel")
+                    b.Property<int?>("ActivityLevel")
                         .HasColumnType("int");
 
                     b.Property<int?>("AvailableDaysPerWeek")
@@ -71,13 +71,16 @@ namespace FitnessProfileService.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<DateOnly>("DateOfBirth")
+                    b.Property<DateOnly?>("DateOfBirth")
                         .HasColumnType("date");
 
-                    b.Property<int>("Gender")
+                    b.Property<int?>("Gender")
                         .HasColumnType("int");
 
-                    b.Property<int>("PrimaryFitnessGoal")
+                    b.Property<int>("OnboardingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PrimaryFitnessGoal")
                         .HasColumnType("int");
 
                     b.Property<int?>("TrainingExperienceLevel")
