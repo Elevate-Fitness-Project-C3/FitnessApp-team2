@@ -7,6 +7,7 @@ using FitnessProfileService.Infrastructure.Repositories;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using FitnessProfileService.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,7 @@ builder.Services.AddScoped( typeof(IGenericRepository<>),typeof(GenericRepositor
 builder.Services.AddScoped<IUnitOfWork,UnitOfWork>( );
 // MediatR
 builder.Services.AddMediatR(typeof(Program).Assembly);
+builder.Services.AddRegistrationMessaging(builder.Configuration);
 
 var app = builder.Build();
 

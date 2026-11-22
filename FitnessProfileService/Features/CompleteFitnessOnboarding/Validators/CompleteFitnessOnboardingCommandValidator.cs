@@ -1,10 +1,11 @@
-﻿using FitnessProfileService.Features.CompleteFitnessOnboarding.Orchestrators;
+﻿using FitnessProfileService.Features.CompleteFitnessOnboarding.Commands;
+using FitnessProfileService.Features.CompleteFitnessOnboarding.Orchestrators;
 using FluentValidation;
 
 namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Validators
 {
     public class CompleteFitnessOnboardingCommandValidator
-    : AbstractValidator<CompleteFitnessOnboardingOrchestrator>
+    : AbstractValidator<CompleteFitnessOnboardingCommand>
     {
         public CompleteFitnessOnboardingCommandValidator()
         {

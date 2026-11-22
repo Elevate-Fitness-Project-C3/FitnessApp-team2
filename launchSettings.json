@@ -4,6 +4,10 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
+        "identityservice": "StartDebugging",
+        "mailpit": "StartWithoutDebugging",
+        "sqlserver": "StartWithoutDebugging",
+        "rabbitmq": "StartWithoutDebugging",
         "fitnessprofileservice": "StartDebugging"
       }
     }
