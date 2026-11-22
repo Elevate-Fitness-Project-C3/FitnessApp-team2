@@ -1,4 +1,11 @@
+using FitnessProfileService.Domain.Contracts;
+using FitnessProfileService.Features.Common;
+using FitnessProfileService.Features.CompleteFitnessOnboarding.Endpoints;
+using FitnessProfileService.Features.CompleteFitnessOnboarding.Validators;
 using FitnessProfileService.Infrastructure.Persistence;
+using FitnessProfileService.Infrastructure.Repositories;
+using FluentValidation;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +18,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ProfileDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddValidatorsFromAssembly(
+    typeof(CompleteFitnessOnboardingOrchestratorValidator).Assembly);
+builder.Services.AddScoped( typeof(IGenericRepository<>),typeof(GenericRepository<>));
+builder.Services.AddScoped<IUnitOfWork,UnitOfWork>( );
+// MediatR
+builder.Services.AddMediatR(typeof(Program).Assembly);
 
 var app = builder.Build();
 
@@ -40,7 +54,7 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
-
+CompleteFitnessOnboardingEndpoint.MapPostCancelEnrollmentEndpoint(app);
 app.Run();
 
 internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
