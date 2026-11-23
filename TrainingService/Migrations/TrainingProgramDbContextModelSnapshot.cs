@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TrainingService.DBContext;
+using TrainingService.Infrastructure.Persistence;
 
 #nullable disable
 
@@ -20,6 +20,35 @@ namespace TrainingService.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("TrainingService.Features.ProgramWorkout.Domain.Entities.ProgramWorkout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProgramId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WeekNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkoutId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProgramId");
+
+                    b.HasIndex("WorkoutId");
+
+                    b.ToTable("ProgramWorkouts");
+                });
 
             modelBuilder.Entity("TrainingService.TrainingProgram.Entities.TrainingProgram", b =>
                 {
@@ -58,7 +87,7 @@ namespace TrainingService.Migrations
                     b.ToTable("TrainingPrograms");
                 });
 
-            modelBuilder.Entity("TrainingService.Workout.Entitis.Workout", b =>
+            modelBuilder.Entity("TrainingService.Workout.Entities.Workout", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -74,9 +103,8 @@ namespace TrainingService.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("EstimatedDurationMinutes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("EstimatedDurationMinutes")
+                        .HasColumnType("int");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -85,6 +113,25 @@ namespace TrainingService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Workouts");
+                });
+
+            modelBuilder.Entity("TrainingService.Features.ProgramWorkout.Domain.Entities.ProgramWorkout", b =>
+                {
+                    b.HasOne("TrainingService.TrainingProgram.Entities.TrainingProgram", "Program")
+                        .WithMany()
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TrainingService.Workout.Entities.Workout", "Workout")
+                        .WithMany()
+                        .HasForeignKey("WorkoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Program");
+
+                    b.Navigation("Workout");
                 });
 #pragma warning restore 612, 618
         }
