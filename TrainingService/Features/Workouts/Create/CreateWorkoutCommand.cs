@@ -32,7 +32,7 @@ namespace TrainingService.Workout.Commands
 
         public async Task<int> Handle(CreateWorkoutCommand request, CancellationToken cancellationToken)
         {
-            // 1. Validate basic rules (AC 01, AC 03)
+            // 1. Validate basic rules
             WorkoutValidator.Validate(
                 request.Title,
                 request.Description,
@@ -40,7 +40,21 @@ namespace TrainingService.Workout.Commands
                 request.EstimatedDurationMinutes,
                 request.Exercises);
 
-            // 2. Validate that every exercise entry refers to an existing ACTIVE exercise (AC 02)
+            // 2. Enforce title uniqueness across catalog
+            var normalizedTitle = request.Title.Trim().ToUpper();
+            var titleExists = await _workoutRepository.AnyAsync(
+                w => w.Title.ToUpper() == normalizedTitle,
+                cancellationToken);
+
+            if (titleExists)
+            {
+                throw new RequestValidationException(new Dictionary<string, string[]>
+                {
+                    { "Title", [$"A workout with the title '{request.Title.Trim()}' already exists in the catalog."] }
+                });
+            }
+
+            // 3. Validate that every exercise entry refers to an existing ACTIVE exercise
             var exerciseRepo = _unitOfWork.Repository<Exercise>();
             var distinctExerciseIds = request.Exercises
                 .Select(e => e.ExerciseId)

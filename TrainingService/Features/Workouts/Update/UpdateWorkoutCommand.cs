@@ -55,7 +55,21 @@ namespace TrainingService.Workout.Commands
                 throw new KeyNotFoundException($"Workout with ID {request.WorkoutId} was not found.");
             }
 
-            // 3. AC 05 Guard: Changes to reusable workouts must not silently alter a published program schedule
+            // 3. Check title conflict with other workouts
+            var normalizedTitle = request.Title.Trim().ToUpper();
+            var titleConflict = await _workoutRepository.AnyAsync(
+                w => w.Title.ToUpper() == normalizedTitle && w.Id != request.WorkoutId,
+                cancellationToken);
+
+            if (titleConflict)
+            {
+                throw new RequestValidationException(new Dictionary<string, string[]>
+                {
+                    { "Title", [$"A workout with the title '{request.Title.Trim()}' already exists in the catalog."] }
+                });
+            }
+
+            // 4. AC 05 Guard: Changes to reusable workouts must not silently alter a published program schedule
             // Direct query using ProgramWorkout navigation in predicate without eager Include
             var programWorkoutRepo = _unitOfWork.Repository<ProgramWorkout>();
             var isLinkedToPublishedProgram = await programWorkoutRepo.GetAll()

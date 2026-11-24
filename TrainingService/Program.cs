@@ -58,13 +58,13 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 var app = builder.Build();
 
-// Ensure database creation
+// Apply pending database migrations automatically
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider
-        .GetRequiredService<TrainingDbContext>();
+        .GetRequiredService<TrainingService.Infrastructure.Persistence.TrainingProgramDbContext>();
 
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 // Global error handling

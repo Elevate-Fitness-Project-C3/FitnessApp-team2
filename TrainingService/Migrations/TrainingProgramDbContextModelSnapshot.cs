@@ -165,6 +165,9 @@ namespace TrainingService.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Title")
+                        .IsUnique();
+
                     b.ToTable("Workouts", (string)null);
                 });
 

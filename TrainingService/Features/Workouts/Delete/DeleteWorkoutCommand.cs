@@ -25,14 +25,14 @@ namespace TrainingService.Workout.Commands
 
         public async Task<Unit> Handle(DeleteWorkoutCommand request, CancellationToken cancellationToken)
         {
-            // 1. Check if workout exists (using single generic repo, NO Include)
+            // 1. Check if workout exists
             var workout = await _workoutRepository.GetByIdAsync(request.WorkoutId, cancellationToken);
             if (workout == null)
             {
                 throw new KeyNotFoundException($"Workout with ID {request.WorkoutId} was not found.");
             }
 
-            // 2. AC 05 Guard: Cannot delete workout used in published programs (NO Include)
+            // 2. AC 05 Guard: Cannot delete workout used in published programs
             var programWorkoutRepo = _unitOfWork.Repository<ProgramWorkout>();
             var isLinkedToPublishedProgram = await programWorkoutRepo.GetAll()
                 .AnyAsync(pw => pw.WorkoutId == request.WorkoutId && pw.Program.Status == ProgramStatus.Published, cancellationToken);

@@ -5,6 +5,7 @@ namespace TrainingService.Repositories.Interfaces
     public interface IGenericRepository<TEntity> where TEntity : class
     {
         Task<TEntity?> GetByIdAsync(int id, CancellationToken ct = default);
+        Task<TEntity?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
         void Add(TEntity entity);
         void Update(TEntity entity);

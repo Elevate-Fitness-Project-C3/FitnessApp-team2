@@ -63,6 +63,11 @@ namespace TrainingService.Infrastructure.Repositories.Classes
             return await _dbContext.Set<TEntity>().FindAsync(new object[] { id }, ct);
         }
 
+        public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        {
+            return await _dbContext.Set<TEntity>().FindAsync(new object[] { id }, ct);
+        }
+
         public async Task SaveChangesAsync(CancellationToken ct = default)
         {
             await _dbContext.SaveChangesAsync(ct);

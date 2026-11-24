@@ -15,6 +15,10 @@ namespace TrainingService.Workout.Entities.Configurations
                 .IsRequired()
                 .HasMaxLength(200);
 
+            // Enforce database-level uniqueness for workout title
+            builder.HasIndex(w => w.Title)
+                .IsUnique();
+
             builder.Property(w => w.Description)
                 .IsRequired()
                 .HasMaxLength(2000);
