@@ -5,7 +5,7 @@ using MediatR;
 namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Orchestrators
 {
     public record CompleteFitnessOnboardingOrchestrator(
-           Guid UserId,
+           string UserId,
            Gender Gender,
            decimal HeightCm,
            decimal WeightKg,

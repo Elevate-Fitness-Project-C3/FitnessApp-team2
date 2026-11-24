@@ -12,6 +12,8 @@ public class CompleteFitnessOnboardingOrchestratorValidator
 
         RuleFor(x => x.Gender)
             .IsInEnum();
+        RuleFor(x => x.UserId)
+            .NotEmpty();
 
         RuleFor(x => x.HeightCm)
             .InclusiveBetween(50, 250);

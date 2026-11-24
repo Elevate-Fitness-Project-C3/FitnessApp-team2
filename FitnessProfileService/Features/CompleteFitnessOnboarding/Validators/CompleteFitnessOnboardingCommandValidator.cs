@@ -10,7 +10,8 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Validators
         public CompleteFitnessOnboardingCommandValidator()
         {
 
-
+            RuleFor(x => x.UserId)
+            .NotEmpty();
             RuleFor(x => x.Gender)
                 .IsInEnum();
 

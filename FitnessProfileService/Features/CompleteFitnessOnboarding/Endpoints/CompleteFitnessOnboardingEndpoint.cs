@@ -10,43 +10,45 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Endpoints
     {
         public static void MapPostCancelEnrollmentEndpoint(this IEndpointRouteBuilder app)
         {
-           
+
             var group = app.MapGroup("/api/fitness-profile")
-                //.RequireAuthorization()
+                .RequireAuthorization()
                 .WithTags("Fitness Profile");
 
             group.MapPost("/onboarding/complete",
                 async (
                     CompleteFitnessOnboardingViewModel request,
-                    //ClaimsPrincipal user,
+                    ClaimsPrincipal user,
                     IMediator mediator,
                     CancellationToken cancellationToken) =>
                 {
-                    //var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                    //if (!Guid.TryParse(userIdClaim, out var userId))
-                    //    return Results.Unauthorized();
+                    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (string.IsNullOrEmpty(userIdClaim))
+                    {
+                        return Results.Unauthorized();
+                    }
 
                     var command = new CompleteFitnessOnboardingOrchestrator
                     (
-                        UserId :Guid.NewGuid(),
-                        Gender : request.Gender,
-                        DateOfBirth : request.DateOfBirth,
-                        HeightCm : request.HeightCm,
-                        WeightKg : request.WeightKg,
-                        PrimaryFitnessGoal : request.PrimaryFitnessGoal,
-                        PhysicalActivityLevel : request.PhysicalActivityLevel,
-                        AvailableDaysPerWeek : request.AvailableDaysPerWeek,
-                        TrainingExperienceLevel : request.TrainingExperienceLevel
+                        UserId: userIdClaim,
+                        Gender: request.Gender,
+
+                        DateOfBirth: request.DateOfBirth,
+                        HeightCm: request.HeightCm,
+                        WeightKg: request.WeightKg,
+                        PrimaryFitnessGoal: request.PrimaryFitnessGoal,
+                        PhysicalActivityLevel: request.PhysicalActivityLevel,
+                        AvailableDaysPerWeek: request.AvailableDaysPerWeek,
+                        TrainingExperienceLevel: request.TrainingExperienceLevel
                     );
 
                     var res = await mediator.Send(command, cancellationToken);
 
-                    return Results.Json<EndpointResponse<bool>>(EndpointResponse<bool>.FromResult(res),statusCode:res.StatusCode);
-                //: Results.Json(EndpointResponse.Fail(res.Message, res.StatusCode), statusCode: res.StatusCode);
+                    return Results.Json<EndpointResponse<bool>>(EndpointResponse<bool>.FromResult(res), statusCode: res.StatusCode);
+                    //: Results.Json(EndpointResponse.Fail(res.Message, res.StatusCode), statusCode: res.StatusCode);
                 })
                 .WithName("CompleteFitnessOnboarding");
         }
     }
-    }
+}
 

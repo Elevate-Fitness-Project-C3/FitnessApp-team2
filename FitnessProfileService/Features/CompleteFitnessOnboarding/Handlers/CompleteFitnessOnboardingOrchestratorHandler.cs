@@ -4,6 +4,8 @@ using FitnessProfileService.Domain.Enums;
 using FitnessProfileService.Features.CompleteFitnessOnboarding.Commands;
 using FitnessProfileService.Features.CompleteFitnessOnboarding.Orchestrators;
 using FitnessProfileService.Features.CompleteFitnessOnboarding.Queries;
+using Gym.Contracts;
+using MassTransit;
 using MediatR;
 
 namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Handlers
@@ -12,25 +14,31 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Handlers
     {
         private readonly IMediator _mediator;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public CompleteFitnessOnboardingOrchestratorHandler(IMediator mediator,IUnitOfWork unitOfWork)
+        public CompleteFitnessOnboardingOrchestratorHandler(IMediator mediator,
+                                                            IUnitOfWork unitOfWork,
+                                                            IPublishEndpoint publishEndpoint)
         {
             _mediator = mediator;
             _unitOfWork = unitOfWork;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<RequestResponse<bool>> Handle(CompleteFitnessOnboardingOrchestrator request, CancellationToken cancellationToken)
         {
-            
-            //Validate
 
-            // 1. Get UserId from authenticated user's claims.
+            //Validate
 
             // 2. Validate that UserId exists and is a valid Guid.
             //    If not, return Unauthorized.
+            if (!Guid.TryParse(request.UserId, out var userId))
+                return RequestResponse<bool>.Fail("Invalid user ID.", StatusCodes.Status401Unauthorized);
+
+          
 
             //db=>> 3. Execute CheckOnboardingEligibilityQuery using UserId.
-            var onboardingEligibilityResponse = await _mediator.Send(new CheckOnboardingEligibilityQuery(request.UserId), cancellationToken);
+            var onboardingEligibilityResponse = await _mediator.Send(new CheckOnboardingEligibilityQuery(userId), cancellationToken);
             if (!onboardingEligibilityResponse.Success ||
                 onboardingEligibilityResponse.Data is null)
             {
@@ -60,7 +68,7 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Handlers
             // 6. Execute onboarding command.
             var commandResponse = await _mediator.Send(
                 new CompleteFitnessOnboardingCommand(
-                    request.UserId,
+                    userId,
                     request.Gender,
                     request.DateOfBirth,
                     request.HeightCm,
@@ -75,6 +83,11 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Handlers
             {
                 return commandResponse;
             }
+            await _publishEndpoint.Publish(
+                new FitnessOnboardingCompleted(userId,
+                                               request.PrimaryFitnessGoal,
+                                               request.TrainingExperienceLevel,
+                                               request.AvailableDaysPerWeek));
 
             // 7. Return success.
             return RequestResponse<bool>.Ok(true);
