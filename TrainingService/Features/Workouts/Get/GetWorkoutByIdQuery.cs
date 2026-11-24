@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using TrainingService.Features.Workouts.Get;
 using TrainingService.Repositories.Interfaces;
 using TrainingService.Workout.Entities;
@@ -23,7 +24,11 @@ namespace TrainingService.TrainingProgram.Queries
             GetWorkoutByIdQuery request,
             CancellationToken cancellationToken)
         {
-            var workout = await _repository.GetByIdAsync(request.WorkoutId);
+            var workout = await _repository.GetAll()
+                .Include(w => w.WorkoutExercises)
+                    .ThenInclude(we => we.Exercise)
+                .FirstOrDefaultAsync(w => w.Id == request.WorkoutId, cancellationToken);
+
             if (workout == null)
                 return null;
 
@@ -33,7 +38,21 @@ namespace TrainingService.TrainingProgram.Queries
                 Title = workout.Title,
                 Description = workout.Description,
                 Difficulty = workout.Difficulty,
-                EstimatedDurationMinutes = workout.EstimatedDurationMinutes
+                EstimatedDurationMinutes = workout.EstimatedDurationMinutes,
+                Exercises = workout.WorkoutExercises
+                    .OrderBy(we => we.OrderIndex)
+                    .Select(we => new WorkoutExerciseDetailsDTO
+                    {
+                        Id = we.Id,
+                        ExerciseId = we.ExerciseId,
+                        ExerciseName = we.Exercise != null ? we.Exercise.Name : string.Empty,
+                        OrderIndex = we.OrderIndex,
+                        Sets = we.Sets,
+                        Reps = we.Reps,
+                        DurationSeconds = we.DurationSeconds,
+                        RestTimeSeconds = we.RestTimeSeconds
+                    })
+                    .ToList()
             };
         }
     }
