@@ -1,53 +1,127 @@
+using Gym.Contracts;
 using IdentityService.Common.ResultPattern;
 using IdentityService.DataAccess;
 using IdentityService.Features.Register.Commands;
 using IdentityService.Features.Register.Notifications;
 using IdentityService.Features.Register.Queries;
 using IdentityService.Features.Register.ViewModels;
-using Gym.Contracts;
 using MassTransit;
 using MediatR;
 
 namespace IdentityService.Features.Register.Orchestrators;
 
-public sealed class RegisterOrchestrator(IMediator mediator, UnitOfWork unitOfWork, IPublishEndpoint publisher)
+public sealed class RegisterOrchestrator
     : IRequestHandler<RegisterCommand, RequestResponse<RegisterViewModel>>
 {
-    public async Task<RequestResponse<RegisterViewModel>> Handle(
-        RegisterCommand command, CancellationToken cancellationToken)
+    private readonly IMediator _mediator;
+    private readonly UnitOfWork _unitOfWork;
+    private readonly IPublishEndpoint _publisher;
+
+    public RegisterOrchestrator(IMediator mediator, UnitOfWork unitOfWork, IPublishEndpoint publisher)
     {
-        var email = command.Email!.Trim();
-        var existing = await mediator.Send(new EmailExistsQuery(email), cancellationToken);
-        if (existing.Data!.Exists)
-            return RequestResponse<RegisterViewModel>.Fail(
-                "This email is already registered. Sign in with your existing account or use another email.",
-                StatusCodes.Status409Conflict, errorCode: "email_already_registered");
-
-        RegisterViewModel registered = null!;
-
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            var user = await mediator.Send(
-                new CreateUserCommand(command.Name!, email, command.Password!), cancellationToken);
-            var userId = user.Data!.UserId;
-
-            await mediator.Send(new AssignUserRoleCommand(userId), cancellationToken);
-
-            var verification = await mediator.Send(
-                new CreateEmailVerificationCodeCommand(userId), cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            await mediator.Publish(new SendVerificationEmailNotification(
-                email, verification.Data!.Code, verification.Data.ExpiresAtUtc), cancellationToken);
-
-            await publisher.Publish(new UserRegistered(userId), cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            registered = new RegisterViewModel(userId, email, false, "pending");
-        }, cancellationToken);
-
-        return RequestResponse<RegisterViewModel>.Ok(
-            registered, "Your account was created. Check your email for the verification code.",
-            StatusCodes.Status201Created);
+        _mediator = mediator;
+        _unitOfWork = unitOfWork;
+        _publisher = publisher;
     }
+    public async Task<RequestResponse<RegisterViewModel>> Handle(RegisterCommand command, CancellationToken cancellationToken)
+    {
+
+        var email = command.Email!.Trim();
+        string userId = null!;
+        SendVerificationEmailNotification verificationEmail = null!;
+        // email exist 
+        var existEmail = await _mediator.Send(new EmailExistsQuery(email));
+
+        if (!existEmail.Success)
+        {
+            return RequestResponse<RegisterViewModel>.Fail(
+                message: "Registration failed .",
+                statusCode: StatusCodes.Status409Conflict,
+                errors: new Dictionary<string, string[]>
+                {
+                    ["email"] = ["This email is already registered."]
+                });
+        }
+        try
+        {
+            await _unitOfWork.ExecuteAsync(async () =>
+            {
+                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password),cancellationToken);
+
+                if (!user.Success)
+                {
+                    throw new RegistrationFailedException(user.Message, user.StatusCode, user.Errors, user.ErrorCode);
+                }
+
+                 userId = user.Data!.UserId;
+
+                var role = await _mediator.Send( new AssignUserRoleCommand(userId), cancellationToken);
+
+                if (!role.Success)
+                {
+                    throw new RegistrationFailedException( role.Message, role.StatusCode, role.Errors, role.ErrorCode);
+                }
+
+                var otp = await _mediator.Send(new CreateEmailVerificationCodeCommand(userId), cancellationToken);
+
+                if (!otp.Success)
+                {
+                    throw new RegistrationFailedException( otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
+                }
+
+                var code = otp.Data!;
+
+                 verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
+        }
+        catch (RegistrationFailedException ex)
+        {
+            return ex.Result;
+        }
+        //messages
+        try
+        {
+            await _publisher.Publish(new UserRegistered(userId));
+            await _unitOfWork.SaveChangesAsync(); 
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                "The account was created, but the registration event could not be queued.", ex);
+        }
+
+        try
+        {
+            await _mediator.Publish(verificationEmail);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+              "The account was created, but the verification email could not be sent.", ex);
+        }
+
+        
+        ////////////
+        return RequestResponse<RegisterViewModel>.Ok( new RegisterViewModel(userId, email, false, "pending"),
+            "Your account was created.",
+            StatusCodes.Status201Created);
+
+
+    }
+
+    private sealed class RegistrationFailedException(
+        string message,
+        int statusCode,
+        IDictionary<string, string[]>? errors,
+        string? errorCode) : Exception(message)
+    {
+        public RequestResponse<RegisterViewModel> Result { get; } = RequestResponse<RegisterViewModel>.Fail(message, statusCode, errors, errorCode);
+    }
+
 }
+
+
+
+

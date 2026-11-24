@@ -3,6 +3,9 @@ using MediatR;
 
 namespace IdentityService.Features.Register.Notifications;
 
+public sealed record SendVerificationEmailNotification(string Email, string Code, DateTime ExpiresAtUtc)
+    : INotification;
+
 public sealed class SendVerificationEmailNotificationHandler(IEmailSender emailSender)
     : INotificationHandler<SendVerificationEmailNotification>
 {
@@ -14,6 +17,6 @@ public sealed class SendVerificationEmailNotificationHandler(IEmailSender emailS
             <p>If you did not request this account, ignore this email.</p>
             """;
 
-      
+        await emailSender.SendEmailAsync(notification.Email, "Your verification code", body, cancellationToken);
     }
 }
