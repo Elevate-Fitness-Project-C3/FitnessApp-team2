@@ -1,37 +1,50 @@
 using IdentityService.Common.ResultPattern;
-using IdentityService.DataAccess.Repositories;
 using IdentityService.Domain;
+using IdentityService.Domain.Entities;
 using IdentityService.Features.Register.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using static MassTransit.ValidationResultExtensions;
 
 namespace IdentityService.Features.Register.Commands;
 
 public sealed record AssignUserRoleCommand(string UserId) : IRequest<RequestResponse<AssignedUserRoleDto>>
 {
-    public sealed class Handler(
-        IGenericRepository<IdentityRole> roles,
-        IGenericRepository<IdentityUserRole<string>> userRoles)
-        : IRequestHandler<AssignUserRoleCommand, RequestResponse<AssignedUserRoleDto>>
+    public sealed class AssignUserRoleCommandHandler :
+        IRequestHandler<AssignUserRoleCommand, RequestResponse<AssignedUserRoleDto>>
     {
-        public async Task<RequestResponse<AssignedUserRoleDto>> Handle(
-            AssignUserRoleCommand command, CancellationToken cancellationToken)
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public AssignUserRoleCommandHandler(UserManager<ApplicationUser> userManager)
         {
-            var normalizedName = new UpperInvariantLookupNormalizer().NormalizeName(RoleNames.User);
-            var role = await roles.Get(x => x.NormalizedName == normalizedName)
-                .SingleOrDefaultAsync(cancellationToken);
-            if (role is null)
+            _userManager = userManager;
+        }
+        public async Task<RequestResponse<AssignedUserRoleDto>> Handle(AssignUserRoleCommand request, CancellationToken cancellationToken)
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if(user is null)
+            {
                 return RequestResponse<AssignedUserRoleDto>.Fail(
-                    "Registration is temporarily unavailable. The User role must be initialized.",
-                    StatusCodes.Status503ServiceUnavailable, errorCode: "registration_role_missing");
+                  "User was not found.",
+                  StatusCodes.Status404NotFound,
+                  errorCode: "user_not_found");
+            }
 
-            await userRoles.AddAsync(
-                new IdentityUserRole<string> { UserId = command.UserId, RoleId = role.Id },
-                cancellationToken);
-
+            var role =await _userManager.AddToRoleAsync(user,RoleNames.User);
+            if (!role.Succeeded)
+            {
+                var errors = new Dictionary<string, string[]>
+                {
+                    ["errors"] = role.Errors.Select(error => error.Description).ToArray()
+                };
+                return RequestResponse<AssignedUserRoleDto>.Fail(
+                    "Could not assign the default role.",
+                    StatusCodes.Status500InternalServerError,
+                    errors: errors,
+                    errorCode: "role_assignment_failed");
+            }
             return RequestResponse<AssignedUserRoleDto>.Ok(
-                new AssignedUserRoleDto(command.UserId, role.Id));
+                new AssignedUserRoleDto(user.Id));
         }
     }
 }

@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace IdentityService.DataAccess.EntityMappings;
 
-public sealed class RefreshSessionConfiguration : IEntityTypeConfiguration<RefreshSession>
+public sealed class RefreshSessionConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
-    public void Configure(EntityTypeBuilder<RefreshSession> builder)
+    public void Configure(EntityTypeBuilder<RefreshToken> builder)
     {
         builder.HasKey(session => session.Id);
         builder.Property(session => session.TokenHash).HasColumnType("char(64)").IsConcurrencyToken();

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace IdentityService.Domain.Entities;
 
-public sealed class RefreshSession
+public sealed class RefreshToken
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public required string UserId { get; init; }
@@ -11,6 +11,4 @@ public sealed class RefreshSession
     public required string TokenHash { get; set; }
     public required DateTimeOffset ExpiresAtUtc { get; init; }
 
-    public static string HashToken(string token) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

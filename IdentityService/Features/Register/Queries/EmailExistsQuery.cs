@@ -8,17 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Features.Register.Queries;
 
-public sealed record EmailExistsQuery(string Email) : IRequest<RequestResponse<EmailExistsDto>>
+public sealed record EmailExistsQuery(string Email) : IRequest<RequestResponse>
 {
-    public sealed class Handler(IGenericRepository<ApplicationUser> users)
-        : IRequestHandler<EmailExistsQuery, RequestResponse<EmailExistsDto>>
+    public sealed class EmailExistsQueryHandler(UserManager<ApplicationUser> _userManager)
+        : IRequestHandler<EmailExistsQuery, RequestResponse>
     {
-        public async Task<RequestResponse<EmailExistsDto>> Handle(EmailExistsQuery query, CancellationToken cancellationToken)
+        public async Task<RequestResponse> Handle(EmailExistsQuery query, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var normalizedEmail = new UpperInvariantLookupNormalizer().NormalizeEmail(query.Email.Trim());
-            var exists = await users.Get(x => x.NormalizedEmail == normalizedEmail).AnyAsync(cancellationToken);
-            return RequestResponse<EmailExistsDto>.Ok(new EmailExistsDto(exists));
+            var user = await _userManager.FindByEmailAsync(query.Email.Trim());
+            return RequestResponse.Ok("email is founded");
         }
     }
 }

@@ -4,67 +4,55 @@ using MimeKit;
 
 namespace IdentityService.Services.Email;
 
-public sealed class EmailSender(IConfiguration configuration, IHostEnvironment environment, ILogger<EmailSender> logger) : IEmailSender
+public sealed class EmailSender(IConfiguration configuration, IHostEnvironment environment) : IEmailSender
 {
+    private readonly IConfigurationSection settings = configuration.GetRequiredSection("EmailSettings");
+
     public async Task SendEmailAsync(
         string email, string subject, string htmlMessage, CancellationToken cancellationToken)
     {
+        var senderEmail = GetRequiredSetting("SenderEmail");
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(GetRequiredSetting("SenderName"), senderEmail));
+        message.To.Add(MailboxAddress.Parse(email));
+        message.Subject = subject;
+        message.Body = new TextPart("html") { Text = htmlMessage };
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var token = timeout.Token;
         using var client = new SmtpClient();
 
-        try
-        {
-            var host = GetRequiredSetting("Host");
-            var senderName = GetRequiredSetting("SenderName");
-            var senderEmail = GetRequiredSetting("SenderEmail");
-            var username = configuration["EmailSettings:Username"]?.Trim();
-            var localInbox = configuration.GetValue<bool>("EmailSettings:LocalInbox") && environment.IsDevelopment();
-            var port = configuration.GetValue<int>("EmailSettings:Port");
-            if (port is < 1 or > 65535)
-                throw new InvalidOperationException("EmailSettings:Port must be between 1 and 65535.");
+        await ConnectAsync(client, senderEmail, token);
+        await client.SendAsync(new SmtpSendRequest(message), token);
+        await client.DisconnectAsync(quit: true, token);
+    }
 
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(senderName, senderEmail));
-            message.To.Add(MailboxAddress.Parse(email));
-            message.Subject = subject;
-            message.Body = new BodyBuilder { HtmlBody = htmlMessage }.ToMessageBody();
+    private async Task ConnectAsync(SmtpClient client, string senderEmail, CancellationToken token)
+    {
+        var host = GetRequiredSetting("Host");
+        var port = settings.GetValue<int>("Port");
+        if (port is < 1 or > 65535)
+            throw new InvalidOperationException("EmailSettings:Port must be between 1 and 65535.");
 
-            var security = localInbox ? SecureSocketOptions.None : port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
-            await client.ConnectAsync(host, port, security, timeout.Token);
-            if (!localInbox)
-                await client.AuthenticateAsync(string.IsNullOrWhiteSpace(username) ? senderEmail : username,
-                    GetRequiredSetting("AppPassword"), timeout.Token);
-            await client.SendAsync(new SmtpSendRequest(message), timeout.Token);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        if (environment.IsDevelopment() && settings.GetValue<bool>("LocalInbox"))
         {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning("Email delivery failed ({ErrorType}).", exception.GetType().Name);
-            throw new IOException("The email provider could not send the message.");
+            await client.ConnectAsync(host, port, SecureSocketOptions.None, token);
+            return;
         }
 
-        try
-        {
-            await client.DisconnectAsync(quit: true, timeout.Token);
-        }
-        catch (Exception exception)
-        {
-            // The SMTP server already accepted the message.
-            logger.LogDebug("Email provider disconnect failed ({ErrorType}).", exception.GetType().Name);
-        }
+        var username = settings["Username"]?.Trim();
+        var password = GetRequiredSetting("AppPassword");
+        var security = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
+        await client.ConnectAsync(host, port, security, token);
+        await client.AuthenticateAsync(string.IsNullOrEmpty(username) ? senderEmail : username, password, token);
     }
 
     private string GetRequiredSetting(string name)
     {
-        var key = $"EmailSettings:{name}";
-        var value = configuration[key];
-
+        var value = settings[name];
         if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"Email setting '{key}' is missing.");
+            throw new InvalidOperationException($"Email setting 'EmailSettings:{name}' is missing.");
 
         return name == "AppPassword" ? value : value.Trim();
     }
