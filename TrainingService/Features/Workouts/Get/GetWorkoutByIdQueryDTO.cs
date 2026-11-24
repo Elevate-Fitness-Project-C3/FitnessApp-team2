@@ -1,4 +1,4 @@
-﻿namespace TrainingService.Features.Workouts.Get
+namespace TrainingService.Features.Workouts.Get
 {
     public class WorkoutExerciseDetailsDTO
     {

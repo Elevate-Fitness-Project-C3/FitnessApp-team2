@@ -28,17 +28,14 @@ namespace TrainingService.Workout.Commands
     public class UpdateWorkoutCommandHandler : IRequestHandler<UpdateWorkoutCommand>
     {
         private readonly IGenericRepository<Entities.Workout> _workoutRepository;
-        private readonly IGenericRepository<Exercise> _exerciseRepository;
-        private readonly IGenericRepository<ProgramWorkout> _programWorkoutRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public UpdateWorkoutCommandHandler(
             IGenericRepository<Entities.Workout> workoutRepository,
-            IGenericRepository<Exercise> exerciseRepository,
-            IGenericRepository<ProgramWorkout> programWorkoutRepository)
+            IUnitOfWork unitOfWork)
         {
             _workoutRepository = workoutRepository;
-            _exerciseRepository = exerciseRepository;
-            _programWorkoutRepository = programWorkoutRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<Unit> Handle(UpdateWorkoutCommand request, CancellationToken cancellationToken)
@@ -51,20 +48,17 @@ namespace TrainingService.Workout.Commands
                 request.EstimatedDurationMinutes,
                 request.Exercises);
 
-            // 2. Fetch existing workout with tracked exercises
-            var workout = await _workoutRepository.GetAll(tracking: true)
-                .Include(w => w.WorkoutExercises)
-                .FirstOrDefaultAsync(w => w.Id == request.WorkoutId, cancellationToken);
-
+            // 2. Check if workout exists (using single generic repo, NO Include)
+            var workout = await _workoutRepository.GetByIdAsync(request.WorkoutId, cancellationToken);
             if (workout == null)
             {
                 throw new KeyNotFoundException($"Workout with ID {request.WorkoutId} was not found.");
             }
 
             // 3. AC 05 Guard: Changes to reusable workouts must not silently alter a published program schedule
-            // Design checkpoint (mentor hint): Do not change reusable structures behind already published program versions.
-            var isLinkedToPublishedProgram = await _programWorkoutRepository.GetAll()
-                .Include(pw => pw.Program)
+            // Direct query using ProgramWorkout navigation in predicate without eager Include
+            var programWorkoutRepo = _unitOfWork.Repository<ProgramWorkout>();
+            var isLinkedToPublishedProgram = await programWorkoutRepo.GetAll()
                 .AnyAsync(pw => pw.WorkoutId == request.WorkoutId && pw.Program.Status == ProgramStatus.Published, cancellationToken);
 
             if (isLinkedToPublishedProgram)
@@ -73,9 +67,10 @@ namespace TrainingService.Workout.Commands
                     $"Workout with ID {request.WorkoutId} cannot be modified because it is currently linked to a published training program schedule.");
             }
 
-            // 4. Validate that all exercise entries refer to existing ACTIVE exercises (AC 02)
+            // 5. Validate that all exercise entries refer to existing ACTIVE exercises (AC 02)
+            var exerciseRepo = _unitOfWork.Repository<Exercise>();
             var distinctExerciseIds = request.Exercises.Select(e => e.ExerciseId).Distinct().ToList();
-            var activeExerciseIds = await _exerciseRepository.GetAll()
+            var activeExerciseIds = await exerciseRepo.GetAll()
                 .Where(e => distinctExerciseIds.Contains(e.Id) && e.IsActive)
                 .Select(e => e.Id)
                 .ToListAsync(cancellationToken);
@@ -89,30 +84,44 @@ namespace TrainingService.Workout.Commands
                 });
             }
 
-            // 5. Update workout scalar properties
-            workout.Title = request.Title.Trim();
-            workout.Description = request.Description.Trim();
-            workout.Difficulty = request.Difficulty.Trim();
-            workout.EstimatedDurationMinutes = request.EstimatedDurationMinutes;
-
-            // 6. Replace workout exercises with updated ordered entries
-            workout.WorkoutExercises.Clear();
-            foreach (var item in request.Exercises.OrderBy(e => e.OrderIndex))
+            // 6. Update workout and exercises atomically using Unit of Work ExecuteAsync
+            await _unitOfWork.ExecuteAsync(async () =>
             {
-                workout.WorkoutExercises.Add(new WorkoutExercise
-                {
-                    WorkoutId = workout.Id,
-                    ExerciseId = item.ExerciseId,
-                    OrderIndex = item.OrderIndex,
-                    Sets = item.Sets,
-                    Reps = item.Reps,
-                    DurationSeconds = item.DurationSeconds,
-                    RestTimeSeconds = item.RestTimeSeconds
-                });
-            }
+                // Update scalar properties
+                workout.Title = request.Title.Trim();
+                workout.Description = request.Description.Trim();
+                workout.Difficulty = request.Difficulty.Trim();
+                workout.EstimatedDurationMinutes = request.EstimatedDurationMinutes;
 
-            // 7. Persist changes
-            await _workoutRepository.SaveChangesAsync(cancellationToken);
+                _workoutRepository.Update(workout);
+
+                // Replace existing exercises
+                var workoutExerciseRepo = _unitOfWork.Repository<WorkoutExercise>();
+                var existingExercises = await workoutExerciseRepo.GetAll(tracking: true)
+                    .Where(we => we.WorkoutId == workout.Id)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var ex in existingExercises)
+                {
+                    workoutExerciseRepo.Delete(ex);
+                }
+
+                foreach (var item in request.Exercises.OrderBy(e => e.OrderIndex))
+                {
+                    workoutExerciseRepo.Add(new WorkoutExercise
+                    {
+                        WorkoutId = workout.Id,
+                        ExerciseId = item.ExerciseId,
+                        OrderIndex = item.OrderIndex,
+                        Sets = item.Sets,
+                        Reps = item.Reps,
+                        DurationSeconds = item.DurationSeconds,
+                        RestTimeSeconds = item.RestTimeSeconds
+                    });
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            });
 
             return Unit.Value;
         }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using TrainingService.Infrastructure.Persistence;
 using TrainingService.Repositories.Interfaces;

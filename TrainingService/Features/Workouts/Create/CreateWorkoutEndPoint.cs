@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TrainingService.Features.Workouts.Get;
 using TrainingService.TrainingProgram.Queries;

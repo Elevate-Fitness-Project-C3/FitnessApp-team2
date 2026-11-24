@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Domain.Entities;
 using TrainingService.Repositories.Interfaces;
@@ -20,14 +20,14 @@ namespace TrainingService.Workout.Commands
     public class CreateWorkoutCommandHandler : IRequestHandler<CreateWorkoutCommand, int>
     {
         private readonly IGenericRepository<Entities.Workout> _workoutRepository;
-        private readonly IGenericRepository<Exercise> _exerciseRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public CreateWorkoutCommandHandler(
             IGenericRepository<Entities.Workout> workoutRepository,
-            IGenericRepository<Exercise> exerciseRepository)
+            IUnitOfWork unitOfWork)
         {
             _workoutRepository = workoutRepository;
-            _exerciseRepository = exerciseRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<int> Handle(CreateWorkoutCommand request, CancellationToken cancellationToken)
@@ -41,12 +41,13 @@ namespace TrainingService.Workout.Commands
                 request.Exercises);
 
             // 2. Validate that every exercise entry refers to an existing ACTIVE exercise (AC 02)
+            var exerciseRepo = _unitOfWork.Repository<Exercise>();
             var distinctExerciseIds = request.Exercises
                 .Select(e => e.ExerciseId)
                 .Distinct()
                 .ToList();
 
-            var activeExerciseIds = await _exerciseRepository.GetAll()
+            var activeExerciseIds = await exerciseRepo.GetAll()
                 .Where(e => distinctExerciseIds.Contains(e.Id) && e.IsActive)
                 .Select(e => e.Id)
                 .ToListAsync(cancellationToken);
@@ -60,7 +61,7 @@ namespace TrainingService.Workout.Commands
                 });
             }
 
-            // 3. Create Workout domain entity and populate ordered exercises
+            // 4. Create Workout domain entity and populate ordered exercises
             var workout = new Entities.Workout
             {
                 Title = request.Title.Trim(),
@@ -82,11 +83,13 @@ namespace TrainingService.Workout.Commands
                 });
             }
 
-            // 4. Atomically persist via repository
-            _workoutRepository.Add(workout);
-            await _workoutRepository.SaveChangesAsync(cancellationToken);
-
-            return workout.Id;
+            // 5. Atomically persist via Unit of Work with ExecuteAsync
+            return await _unitOfWork.ExecuteAsync(async () =>
+            {
+                _workoutRepository.Add(workout);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return workout.Id;
+            });
         }
     }
 }

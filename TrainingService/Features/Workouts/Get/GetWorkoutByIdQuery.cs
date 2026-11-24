@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Features.Workouts.Get;
 using TrainingService.Repositories.Interfaces;
@@ -24,36 +24,32 @@ namespace TrainingService.TrainingProgram.Queries
             GetWorkoutByIdQuery request,
             CancellationToken cancellationToken)
         {
-            var workout = await _repository.GetAll()
-                .Include(w => w.WorkoutExercises)
-                    .ThenInclude(we => we.Exercise)
-                .FirstOrDefaultAsync(w => w.Id == request.WorkoutId, cancellationToken);
-
-            if (workout == null)
-                return null;
-
-            return new GetWorkoutByIdQueryDTO
-            {
-                Id = workout.Id,
-                Title = workout.Title,
-                Description = workout.Description,
-                Difficulty = workout.Difficulty,
-                EstimatedDurationMinutes = workout.EstimatedDurationMinutes,
-                Exercises = workout.WorkoutExercises
-                    .OrderBy(we => we.OrderIndex)
-                    .Select(we => new WorkoutExerciseDetailsDTO
-                    {
-                        Id = we.Id,
-                        ExerciseId = we.ExerciseId,
-                        ExerciseName = we.Exercise != null ? we.Exercise.Name : string.Empty,
-                        OrderIndex = we.OrderIndex,
-                        Sets = we.Sets,
-                        Reps = we.Reps,
-                        DurationSeconds = we.DurationSeconds,
-                        RestTimeSeconds = we.RestTimeSeconds
-                    })
-                    .ToList()
-            };
+            // Direct projection via Select without eager Include overhead
+            return await _repository.GetAll()
+                .Where(w => w.Id == request.WorkoutId)
+                .Select(w => new GetWorkoutByIdQueryDTO
+                {
+                    Id = w.Id,
+                    Title = w.Title,
+                    Description = w.Description,
+                    Difficulty = w.Difficulty,
+                    EstimatedDurationMinutes = w.EstimatedDurationMinutes,
+                    Exercises = w.WorkoutExercises
+                        .OrderBy(we => we.OrderIndex)
+                        .Select(we => new WorkoutExerciseDetailsDTO
+                        {
+                            Id = we.Id,
+                            ExerciseId = we.ExerciseId,
+                            ExerciseName = we.Exercise != null ? we.Exercise.Name : string.Empty,
+                            OrderIndex = we.OrderIndex,
+                            Sets = we.Sets,
+                            Reps = we.Reps,
+                            DurationSeconds = we.DurationSeconds,
+                            RestTimeSeconds = we.RestTimeSeconds
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }
