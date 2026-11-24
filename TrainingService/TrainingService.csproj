@@ -9,18 +9,40 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+    <!-- FluentValidation -->
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+
+    <!-- MediatR -->
     <PackageReference Include="MediatR" Version="10.0.1" />
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
+
+    <!-- OpenAPI -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+
+    <!-- Entity Framework Core -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.15">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
+    <!-- Docker -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+
+    <!-- Swagger -->
     <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.3.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.3.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1" />
+
   </ItemGroup>
 
 </Project>
