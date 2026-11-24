@@ -16,5 +16,6 @@ public static class IdentitySeeder
             if (!result.Succeeded)
                 throw new InvalidOperationException($"Unable to seed the {name} role.");
         }
+
     }
 }

@@ -7,7 +7,5 @@ public sealed class EmailVerificationCode
     public required string CodeHash { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime ExpiresAtUtc { get; set; }
-    public DateTime? UsedAtUtc { get; set; }
     public int AttemptCount { get; set; }
-    public Guid Version { get; set; } = Guid.NewGuid();
 }

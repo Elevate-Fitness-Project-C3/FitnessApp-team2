@@ -10,7 +10,6 @@ public sealed class EmailVerificationCodeConfiguration : IEntityTypeConfiguratio
     {
         code.HasKey(x => x.UserId);
         code.Property(x => x.CodeHash).HasMaxLength(512).IsRequired();
-        code.Property(x => x.Version).IsConcurrencyToken();
         code.HasOne(x => x.User).WithOne().HasForeignKey<EmailVerificationCode>(x => x.UserId);
     }
 }

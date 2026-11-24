@@ -1,5 +1,5 @@
-using MassTransit;
 using IdentityService.Domain.Entities;
+using MassTransit;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,14 +12,16 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
     public DbSet<EmailVerificationCode> EmailVerificationCodes => Set<EmailVerificationCode>();
 
-    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<RefreshToken> refreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
         builder.AddInboxStateEntity();
         builder.AddOutboxMessageEntity();
         builder.AddOutboxStateEntity();
+
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
        
     }
