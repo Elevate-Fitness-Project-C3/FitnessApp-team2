@@ -39,7 +39,7 @@ namespace FitnessProfileService.Features.CreateFitnessProfile.Handlers
             }
             if(checkProfileExistsQuery.Data)
             {
-                return RequestResponse<bool>.Fail("Fitness profile already exists for the user", 400);
+                return RequestResponse<bool>.Ok(true, statusCode: 201);
             };
             // Create profile
             var fitnessProfile = new FitnessProfile
@@ -51,7 +51,7 @@ namespace FitnessProfileService.Features.CreateFitnessProfile.Handlers
             _fitnessProfileRepo.Add(fitnessProfile);
             // Save changes
             await _fitnessProfileRepo.SaveChangesAsync(cancellationToken);
-            return  RequestResponse<bool>.Ok(true,statusCode:401);
+            return  RequestResponse<bool>.Ok(true,statusCode:201);
         }
     }
 }
