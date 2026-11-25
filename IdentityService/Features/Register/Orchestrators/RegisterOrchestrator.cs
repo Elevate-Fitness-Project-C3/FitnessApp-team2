@@ -4,6 +4,7 @@ using IdentityService.DataAccess;
 using IdentityService.Features.Register.Commands;
 using IdentityService.Features.Register.Notifications;
 using IdentityService.Features.Register.Queries;
+using IdentityService.Features.Register.Validators;
 using IdentityService.Features.Register.ViewModels;
 using MassTransit;
 using MediatR;
@@ -23,56 +24,56 @@ public sealed class RegisterOrchestrator
         _unitOfWork = unitOfWork;
         _publisher = publisher;
     }
+
     public async Task<RequestResponse<RegisterViewModel>> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
+        var errors = RegisterValidator.Validate(command);
+        if (errors.Count > 0)
+            return RequestResponse<RegisterViewModel>.Fail("Invalid registration details.", errors: errors);
 
-        var email = command.Email!.Trim();
+        var email = command.Email.Trim();
         string userId = null!;
         SendVerificationEmailNotification verificationEmail = null!;
-        // email exist 
-        var existEmail = await _mediator.Send(new EmailExistsQuery(email));
+        var lookup = await _mediator.Send(new EmailExistsQuery(email), cancellationToken);
 
-        if (!existEmail.Success)
+        if (!lookup.Success)
         {
             return RequestResponse<RegisterViewModel>.Fail(
-                message: "Registration failed .",
-                statusCode: StatusCodes.Status409Conflict,
-                errors: new Dictionary<string, string[]>
-                {
-                    ["email"] = ["This email is already registered."]
-                });
+                lookup.Message, lookup.StatusCode, lookup.Errors, lookup.ErrorCode);
         }
+
+
         try
         {
             await _unitOfWork.ExecuteAsync(async () =>
             {
-                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password),cancellationToken);
+                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password), cancellationToken);
 
                 if (!user.Success)
                 {
                     throw new RegistrationFailedException(user.Message, user.StatusCode, user.Errors, user.ErrorCode);
                 }
 
-                 userId = user.Data!.UserId;
+                userId = user.Data!.UserId;
 
-                var role = await _mediator.Send( new AssignUserRoleCommand(userId), cancellationToken);
+                var role = await _mediator.Send(new AssignUserRoleCommand(userId), cancellationToken);
 
                 if (!role.Success)
                 {
-                    throw new RegistrationFailedException( role.Message, role.StatusCode, role.Errors, role.ErrorCode);
+                    throw new RegistrationFailedException(role.Message, role.StatusCode, role.Errors, role.ErrorCode);
                 }
 
                 var otp = await _mediator.Send(new CreateEmailVerificationCodeCommand(userId), cancellationToken);
 
                 if (!otp.Success)
                 {
-                    throw new RegistrationFailedException( otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
+                    throw new RegistrationFailedException(otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
                 }
 
                 var code = otp.Data!;
+                verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
 
-                 verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
-
+                await _publisher.Publish(new UserRegistered(userId), cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
         }
@@ -80,35 +81,21 @@ public sealed class RegisterOrchestrator
         {
             return ex.Result;
         }
-        //messages
-        try
-        {
-            await _publisher.Publish(new UserRegistered(userId));
-            await _unitOfWork.SaveChangesAsync(); 
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                "The account was created, but the registration event could not be queued.", ex);
-        }
 
         try
         {
             await _mediator.Publish(verificationEmail);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException(
-              "The account was created, but the verification email could not be sent.", ex);
+            return RequestResponse<RegisterViewModel>.Fail(
+                "The account was created, but the verification email could not be sent.",
+                StatusCodes.Status503ServiceUnavailable, errorCode: "verification_email_failed");
         }
 
-        
-        ////////////
-        return RequestResponse<RegisterViewModel>.Ok( new RegisterViewModel(userId, email, false, "pending"),
+        return RequestResponse<RegisterViewModel>.Ok(new RegisterViewModel(userId, email, false, "pending"),
             "Your account was created.",
             StatusCodes.Status201Created);
-
-
     }
 
     private sealed class RegistrationFailedException(
@@ -121,7 +108,3 @@ public sealed class RegisterOrchestrator
     }
 
 }
-
-
-
-
