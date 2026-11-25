@@ -1,0 +1,3 @@
+namespace NutritionService.Features.NutritionGoals.GetMyNutritionPreference;
+
+public sealed record GetMyNutritionPreferenceQuery;
