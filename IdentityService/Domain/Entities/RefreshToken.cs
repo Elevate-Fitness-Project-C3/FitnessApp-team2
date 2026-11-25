@@ -11,4 +11,6 @@ public sealed class RefreshToken
     public required string TokenHash { get; set; }
     public required DateTimeOffset ExpiresAtUtc { get; init; }
 
+    public static string HashToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

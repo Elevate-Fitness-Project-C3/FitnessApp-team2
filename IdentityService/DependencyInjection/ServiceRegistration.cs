@@ -4,7 +4,6 @@ using IdentityService.DataAccess;
 using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Repositories;
 using IdentityService.Domain.Entities;
-using IdentityService.Features.Register.Validators;
 using IdentityService.Services.Email;
 using IdentityService.Services.JwtServices;
 using MediatR;
@@ -65,6 +64,7 @@ public static class ServiceRegistration
             options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
         }).AddJwtBearer(options =>
         {
+            options.MapInboundClaims = false;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,

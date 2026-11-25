@@ -1,6 +1,6 @@
-namespace IdentityService.Features.Login.ViewModels;
+namespace IdentityService.Features.Login.DTOs;
 
-public sealed class LoginSessionViewModel
+public sealed class LoginSessionDto
 {
     public required string AccessToken { get; init; }
     public required DateTimeOffset AccessTokenExpiresAtUtc { get; init; }

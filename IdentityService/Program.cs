@@ -1,9 +1,10 @@
-using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Seeding;
 using IdentityService.DependencyInjection;
-using Microsoft.AspNetCore.Identity;
+using IdentityService.Features.Login.Endpoints;
 using IdentityService.Features.Register.Endpoints;
+using IdentityService.Features.VerifyEmail.Endpoints;
 using IdentityService.Messaging;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,14 +38,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRegisterEndpoint();
+app.MapVerifyEmailEndpoint();
+app.MapLoginEndpoint();
+app.MapRefreshEndpoint();
 
-
-await using (var scope = app.Services.CreateAsyncScope())
+using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", app.Environment.IsDevelopment());
-    await IdentitySeeder.InitializeAsync(db, roleManager, applyMigrations);
+    var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await IdentitySeeder.SeedRolesAsync(roles);
 }
 
 app.Run();
