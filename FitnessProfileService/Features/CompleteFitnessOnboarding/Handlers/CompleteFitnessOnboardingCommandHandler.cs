@@ -47,6 +47,8 @@ namespace FitnessProfileService.Features.CompleteFitnessOnboarding.Handlers
                 RecordedAt = DateTime.UtcNow
             });
             profile.PrimaryFitnessGoal = request.PrimaryFitnessGoal;
+            profile.AvailableDaysPerWeek = request.AvailableDaysPerWeek;
+            profile.TrainingExperienceLevel = request.TrainingExperienceLevel;
             profile.ActivityLevel = request.PhysicalActivityLevel;
             profile.UpdatedAt = DateTime.UtcNow;
             // 5. Complete onboarding
