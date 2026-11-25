@@ -1,6 +1,4 @@
-using IdentityService.DataAccess.Seeding;
 using IdentityService.DependencyInjection;
-using Microsoft.AspNetCore.Identity;
 using IdentityService.Features.Register.Endpoints;
 using IdentityService.Messaging;
 
@@ -38,10 +36,6 @@ app.UseAuthorization();
 app.MapRegisterEndpoint();
 
 
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await IdentitySeeder.SeedRolesAsync(roleManager);
-}
+
 
 app.Run();
