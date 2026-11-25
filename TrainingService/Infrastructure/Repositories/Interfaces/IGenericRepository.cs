@@ -1,16 +1,17 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 
 namespace TrainingService.Repositories.Interfaces
 {
-    public interface IGenericRepository<TEntity> where TEntity :class
+    public interface IGenericRepository<TEntity> where TEntity : class
     {
         Task<TEntity?> GetByIdAsync(int id, CancellationToken ct = default);
+        Task<TEntity?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
-        //how many rows effected (Plan plan --> means the plan that effected/added/edited/ deleted)
         void Add(TEntity entity);
         void Update(TEntity entity);
         void Delete(TEntity entity);
         Task<IEnumerable<TEntity>> GetAllAsync(bool tracking = false, CancellationToken ct = default);
+        IQueryable<TEntity> GetAll(bool tracking = false);
 
         Task<bool> AnyAsync(Expression<Func<TEntity, bool>> perdicate, CancellationToken ct = default);
         Task<TEntity?> FirstOrDefualtAsyc(Expression<Func<TEntity, bool>> predicate, bool tracking = false, CancellationToken ct = default);

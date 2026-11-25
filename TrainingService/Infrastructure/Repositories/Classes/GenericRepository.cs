@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using TrainingService.Infrastructure.Persistence;
 using TrainingService.Repositories.Interfaces;
@@ -13,7 +13,6 @@ namespace TrainingService.Infrastructure.Repositories.Classes
         {
             _dbContext = dbContext;
         }
-
 
         public void Add(TEntity entity)
         {
@@ -45,24 +44,33 @@ namespace TrainingService.Infrastructure.Repositories.Classes
         public async Task<TEntity?> FirstOrDefualtAsyc(Expression<Func<TEntity, bool>> predicate, bool tracking = false, CancellationToken ct = default)
         {
             IQueryable<TEntity> query = tracking ? _dbContext.Set<TEntity>() : _dbContext.Set<TEntity>().AsNoTracking();
-            return await query.FirstOrDefaultAsync(predicate);
+            return await query.FirstOrDefaultAsync(predicate, ct);
         }
 
         public async Task<IEnumerable<TEntity>> GetAllAsync(bool tracking = false, CancellationToken ct = default)
         {
             IQueryable<TEntity> query = tracking ? _dbContext.Set<TEntity>() : _dbContext.Set<TEntity>().AsNoTracking();
-            return await query.ToListAsync();
+            return await query.ToListAsync(ct);
+        }
+
+        public IQueryable<TEntity> GetAll(bool tracking = false)
+        {
+            return tracking ? _dbContext.Set<TEntity>() : _dbContext.Set<TEntity>().AsNoTracking();
         }
 
         public async Task<TEntity?> GetByIdAsync(int id, CancellationToken ct = default)
         {
-            return await _dbContext.Set<TEntity>().FindAsync(id, ct);
+            return await _dbContext.Set<TEntity>().FindAsync(new object[] { id }, ct);
+        }
 
+        public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        {
+            return await _dbContext.Set<TEntity>().FindAsync(new object[] { id }, ct);
         }
 
         public async Task SaveChangesAsync(CancellationToken ct = default)
         {
-             await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct);
         }
 
         public void Update(TEntity entity)

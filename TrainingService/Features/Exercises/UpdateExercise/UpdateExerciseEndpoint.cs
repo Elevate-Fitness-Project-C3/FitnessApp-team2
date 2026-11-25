@@ -58,13 +58,13 @@ public static class UpdateExerciseEndpoint
                 );
             }
 
-            // 5. Return 200 OK with updated exercise
-            return Results.Ok(result.Value);
+            // 5. Return 204 NoContent per CQRS conventions
+            return Results.NoContent();
         })
         .WithName("UpdateExercise")
         .WithSummary("Update permitted descriptive fields of an exercise")
         .WithDescription("Allows an Admin to update descriptive fields (Name, Instructions, Muscle Group, Tracking Type) of an existing exercise (TR-A01).")
-        .Produces<ExerciseResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status204NoContent)
         .ProducesValidationProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status409Conflict);
