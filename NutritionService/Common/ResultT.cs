@@ -6,9 +6,13 @@ public sealed class Result<TValue> : Result
 
     public TValue Value => IsSuccess
         ? _value!
-        : throw new InvalidOperationException("Cannot access value of a failed result.");
+        : throw new InvalidOperationException(
+            "Cannot access value of a failed result.");
 
-    internal Result(TValue? value, bool isSuccess, Error error)
+    internal Result(
+        TValue? value,
+        bool isSuccess,
+        Error error)
         : base(isSuccess, error)
     {
         _value = value;

@@ -8,4 +8,4 @@ public record CreateExerciseCommand(
     string Name,
     string Instructions,
     TargetMuscleGroup TargetMuscleGroup,
-    TrackingType TrackingType) : IRequest<Result<ExerciseResponse>>;
+    TrackingType TrackingType) : IRequest<Result<Guid>>;

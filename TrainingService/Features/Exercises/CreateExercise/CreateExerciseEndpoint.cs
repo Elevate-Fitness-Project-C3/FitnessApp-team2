@@ -38,13 +38,13 @@ public static class CreateExerciseEndpoint
                 );
             }
 
-            // 4. Return 201 Created
-            return Results.Created($"/api/v1/exercises/{result.Value!.Id}", result.Value);
+            // 4. Return 201 Created with newly created ID
+            return Results.Created($"/api/v1/exercises/{result.Value}", result.Value);
         })
         .WithName("CreateExercise")
         .WithSummary("Create a new exercise definition")
         .WithDescription("Allows an Admin to create a unique exercise definition in the catalog (TR-A01).")
-        .Produces<ExerciseResponse>(StatusCodes.Status201Created)
+        .Produces<Guid>(StatusCodes.Status201Created)
         .ProducesValidationProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status409Conflict);
 

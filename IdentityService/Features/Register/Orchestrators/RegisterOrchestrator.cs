@@ -4,6 +4,7 @@ using IdentityService.DataAccess;
 using IdentityService.Features.Register.Commands;
 using IdentityService.Features.Register.Notifications;
 using IdentityService.Features.Register.Queries;
+using IdentityService.Features.Register.Validators;
 using IdentityService.Features.Register.ViewModels;
 using MassTransit;
 using MediatR;
@@ -26,6 +27,10 @@ public sealed class RegisterOrchestrator
 
     public async Task<RequestResponse<RegisterViewModel>> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
+        var errors = RegisterValidator.Validate(command);
+        if (errors.Count > 0)
+            return RequestResponse<RegisterViewModel>.Fail("Invalid registration details.", errors: errors);
+
         var email = command.Email.Trim();
         string userId = null!;
         SendVerificationEmailNotification verificationEmail = null!;
@@ -36,6 +41,7 @@ public sealed class RegisterOrchestrator
             return RequestResponse<RegisterViewModel>.Fail(
                 lookup.Message, lookup.StatusCode, lookup.Errors, lookup.ErrorCode);
         }
+
         if (lookup.Data!.Exists)
             return RegistrationErrors.EmailAlreadyRegistered<RegisterViewModel>();
 
@@ -82,10 +88,11 @@ public sealed class RegisterOrchestrator
         {
             await _mediator.Publish(verificationEmail);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException(
-              "The account was created, but the verification email could not be sent.", ex);
+            return RequestResponse<RegisterViewModel>.Fail(
+                "The account was created, but the verification email could not be sent.",
+                StatusCodes.Status503ServiceUnavailable, errorCode: "verification_email_failed");
         }
 
         return RequestResponse<RegisterViewModel>.Ok(new RegisterViewModel(userId, email, false, "pending"),
