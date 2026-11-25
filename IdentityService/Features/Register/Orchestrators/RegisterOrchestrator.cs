@@ -23,73 +23,59 @@ public sealed class RegisterOrchestrator
         _unitOfWork = unitOfWork;
         _publisher = publisher;
     }
+
     public async Task<RequestResponse<RegisterViewModel>> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
-
-        var email = command.Email!.Trim();
+        var email = command.Email.Trim();
         string userId = null!;
         SendVerificationEmailNotification verificationEmail = null!;
-        // email exist 
-        var existEmail = await _mediator.Send(new EmailExistsQuery(email));
+        var lookup = await _mediator.Send(new EmailExistsQuery(email), cancellationToken);
 
-        if (!existEmail.Success)
+        if (!lookup.Success)
         {
             return RequestResponse<RegisterViewModel>.Fail(
-                message: "Registration failed .",
-                statusCode: StatusCodes.Status409Conflict,
-                errors: new Dictionary<string, string[]>
-                {
-                    ["email"] = ["This email is already registered."]
-                });
+                lookup.Message, lookup.StatusCode, lookup.Errors, lookup.ErrorCode);
         }
+        if (lookup.Data!.Exists)
+            return RegistrationErrors.EmailAlreadyRegistered<RegisterViewModel>();
+
         try
         {
             await _unitOfWork.ExecuteAsync(async () =>
             {
-                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password),cancellationToken);
+                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password), cancellationToken);
 
                 if (!user.Success)
                 {
                     throw new RegistrationFailedException(user.Message, user.StatusCode, user.Errors, user.ErrorCode);
                 }
 
-                 userId = user.Data!.UserId;
+                userId = user.Data!.UserId;
 
-                var role = await _mediator.Send( new AssignUserRoleCommand(userId), cancellationToken);
+                var role = await _mediator.Send(new AssignUserRoleCommand(userId), cancellationToken);
 
                 if (!role.Success)
                 {
-                    throw new RegistrationFailedException( role.Message, role.StatusCode, role.Errors, role.ErrorCode);
+                    throw new RegistrationFailedException(role.Message, role.StatusCode, role.Errors, role.ErrorCode);
                 }
 
                 var otp = await _mediator.Send(new CreateEmailVerificationCodeCommand(userId), cancellationToken);
 
                 if (!otp.Success)
                 {
-                    throw new RegistrationFailedException( otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
+                    throw new RegistrationFailedException(otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
                 }
 
                 var code = otp.Data!;
+                verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
 
-                 verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
-
+                await _publisher.Publish(new UserRegistered(userId), cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
         }
         catch (RegistrationFailedException ex)
         {
             return ex.Result;
-        }
-        //messages
-        try
-        {
-            await _publisher.Publish(new UserRegistered(userId));
-            await _unitOfWork.SaveChangesAsync(); 
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                "The account was created, but the registration event could not be queued.", ex);
         }
 
         try
@@ -102,13 +88,9 @@ public sealed class RegisterOrchestrator
               "The account was created, but the verification email could not be sent.", ex);
         }
 
-        
-        ////////////
-        return RequestResponse<RegisterViewModel>.Ok( new RegisterViewModel(userId, email, false, "pending"),
+        return RequestResponse<RegisterViewModel>.Ok(new RegisterViewModel(userId, email, false, "pending"),
             "Your account was created.",
             StatusCodes.Status201Created);
-
-
     }
 
     private sealed class RegistrationFailedException(
@@ -121,7 +103,3 @@ public sealed class RegisterOrchestrator
     }
 
 }
-
-
-
-

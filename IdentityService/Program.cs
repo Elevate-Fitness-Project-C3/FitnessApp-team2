@@ -1,3 +1,4 @@
+using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Seeding;
 using IdentityService.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
@@ -40,8 +41,10 @@ app.MapRegisterEndpoint();
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await IdentitySeeder.SeedRolesAsync(roleManager);
+    var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", app.Environment.IsDevelopment());
+    await IdentitySeeder.InitializeAsync(db, roleManager, applyMigrations);
 }
 
 app.Run();
