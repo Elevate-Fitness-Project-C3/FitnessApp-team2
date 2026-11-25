@@ -2,18 +2,18 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using IdentityService.Features.Login.ViewModels;
+using IdentityService.Features.Login.DTOs;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.Services.JwtServices;
 
-public sealed class TokenService(JwtOptions options, TimeProvider clock) : ITokenService
+public sealed class TokenService(JwtOptions options) : ITokenService
 {
-    public LoginSessionViewModel GenerateTokens(
+    public LoginSessionDto GenerateTokens(
         string userId, string email, IEnumerable<string> roles, DateTimeOffset? refreshExpiresAtUtc = null)
     {
         // JWT time claims have whole-second precision.
-        var now = DateTimeOffset.FromUnixTimeSeconds(clock.GetUtcNow().ToUnixTimeSeconds());
+        var now = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var accessExpiresAt = now.AddMinutes(options.DurationInMinutes);
         var claims = new List<Claim>
         {
@@ -32,7 +32,7 @@ public sealed class TokenService(JwtOptions options, TimeProvider clock) : IToke
             expires: accessExpiresAt.UtcDateTime,
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
 
-        return new LoginSessionViewModel
+        return new LoginSessionDto
         {
             AccessToken = new JwtSecurityTokenHandler().WriteToken(jwt),
             AccessTokenExpiresAtUtc = accessExpiresAt,

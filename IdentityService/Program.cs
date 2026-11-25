@@ -1,6 +1,10 @@
+using IdentityService.DataAccess.Seeding;
 using IdentityService.DependencyInjection;
+using IdentityService.Features.Login.Endpoints;
 using IdentityService.Features.Register.Endpoints;
+using IdentityService.Features.VerifyEmail.Endpoints;
 using IdentityService.Messaging;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,8 +38,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRegisterEndpoint();
+app.MapVerifyEmailEndpoint();
+app.MapLoginEndpoint();
+app.MapRefreshEndpoint();
 
-
-
+using (var scope = app.Services.CreateScope())
+{
+    var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await IdentitySeeder.SeedRolesAsync(roles);
+}
 
 app.Run();
