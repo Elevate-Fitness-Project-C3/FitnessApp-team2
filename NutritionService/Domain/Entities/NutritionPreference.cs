@@ -1,39 +1,76 @@
+using NutritionService.Common;
 using NutritionService.Domain.Enums;
+using NutritionService.Domain.Errors;
 
 namespace NutritionService.Domain.Entities;
 
 public sealed class NutritionPreference
 {
-    public Guid Id { get; private set; }
+    public long Id { get; private set; }
+
     public Guid UserId { get; private set; }
+
     public NutritionGoal NutritionGoal { get; private set; }
+
     public DateTime UpdatedAtUtc { get; private set; }
 
-    private NutritionPreference() { }
-
-    public static NutritionPreference Create(Guid userId, NutritionGoal nutritionGoal)
+    private NutritionPreference()
     {
-        if (userId == Guid.Empty)
-            throw new ArgumentException("UserId must not be empty.", nameof(userId));
-
-        if (!Enum.IsDefined(nutritionGoal))
-            throw new ArgumentException("Invalid nutrition goal.", nameof(nutritionGoal));
-
-        return new NutritionPreference
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            NutritionGoal = nutritionGoal,
-            UpdatedAtUtc = DateTime.UtcNow
-        };
     }
 
-    public void ChangeGoal(NutritionGoal newGoal)
+    private NutritionPreference(
+        long id,
+        Guid userId,
+        NutritionGoal nutritionGoal)
     {
-        if (!Enum.IsDefined(newGoal))
-            throw new ArgumentException("Invalid nutrition goal.", nameof(newGoal));
-
-        NutritionGoal = newGoal;
+        Id = id;
+        UserId = userId;
+        NutritionGoal = nutritionGoal;
         UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public static Result<NutritionPreference> Create(
+        long id,
+        Guid userId,
+        NutritionGoal nutritionGoal)
+    {
+        if (id <= 0)
+        {
+            return Result.Failure<NutritionPreference>(
+                NutritionPreferenceErrors.InvalidId);
+        }
+
+        if (userId == Guid.Empty)
+        {
+            return Result.Failure<NutritionPreference>(
+                NutritionPreferenceErrors.EmptyUserId);
+        }
+
+        if (!Enum.IsDefined(nutritionGoal))
+        {
+            return Result.Failure<NutritionPreference>(
+                NutritionPreferenceErrors.InvalidGoal);
+        }
+
+        var preference = new NutritionPreference(
+            id,
+            userId,
+            nutritionGoal);
+
+        return Result.Success(preference);
+    }
+
+    public Result ChangeGoal(NutritionGoal nutritionGoal)
+    {
+        if (!Enum.IsDefined(nutritionGoal))
+        {
+            return Result.Failure(
+                NutritionPreferenceErrors.InvalidGoal);
+        }
+
+        NutritionGoal = nutritionGoal;
+        UpdatedAtUtc = DateTime.UtcNow;
+
+        return Result.Success();
     }
 }
