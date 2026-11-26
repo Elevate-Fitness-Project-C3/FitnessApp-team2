@@ -22,7 +22,7 @@ public sealed class RefreshSessionOrchestrator(IMediator mediator) : IRequestHan
 
         var roleIds = await mediator.Send(new GetUserRoleIdsQuery(session.UserId), cancellationToken);
         var roles = await mediator.Send(new GetRoleNamesQuery(roleIds), cancellationToken);
-        var credentials = await mediator.Send(new GenerateRefreshCredentialsCommand(session, roles), cancellationToken);
+        var credentials = await mediator.Send(new GenerateCredentialsQuery(session.UserId, session.Email, roles, session.ExpiresAtUtc), cancellationToken);
         var newHash = RefreshToken.HashToken(credentials.RefreshToken);
         var rotated = await mediator.Send(new RotateRefreshTokenCommand(oldHash, newHash), cancellationToken);
         return rotated ? RequestResponse<LoginSessionDto>.Ok(credentials) : invalidToken;
