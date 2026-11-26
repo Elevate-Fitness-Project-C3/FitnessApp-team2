@@ -116,25 +116,33 @@ namespace TrainingService.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("DurationWeeks")
                         .HasColumnType("int");
 
                     b.Property<string>("Goal")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Level")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.HasKey("Id");
 
-                    b.ToTable("TrainingPrograms");
+                    b.ToTable("TrainingPrograms", (string)null);
                 });
 
             modelBuilder.Entity("TrainingService.Workout.Entities.Workout", b =>
@@ -213,7 +221,7 @@ namespace TrainingService.Migrations
             modelBuilder.Entity("TrainingService.Features.ProgramWorkout.Domain.Entities.ProgramWorkout", b =>
                 {
                     b.HasOne("TrainingService.Features.TrainingPrograms.Domain.Entities.TrainingProgram", "Program")
-                        .WithMany()
+                        .WithMany("ProgramWorkouts")
                         .HasForeignKey("ProgramId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -246,6 +254,11 @@ namespace TrainingService.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("Workout");
+                });
+
+            modelBuilder.Entity("TrainingService.Features.TrainingPrograms.Domain.Entities.TrainingProgram", b =>
+                {
+                    b.Navigation("ProgramWorkouts");
                 });
 
             modelBuilder.Entity("TrainingService.Workout.Entities.Workout", b =>

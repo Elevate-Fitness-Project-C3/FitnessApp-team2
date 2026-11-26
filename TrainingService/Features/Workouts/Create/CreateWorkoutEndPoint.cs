@@ -29,6 +29,7 @@ namespace TrainingService.Workout.EndPoints
                 }
             })
             .WithName("CreateWorkout")
+            .RequireAuthorization("AdminOnly")
             .Produces<int>(StatusCodes.Status201Created)
             .ProducesValidationProblem();
 
@@ -39,6 +40,7 @@ namespace TrainingService.Workout.EndPoints
                 return workout is not null ? Results.Ok(workout) : Results.NotFound();
             })
             .WithName("GetWorkoutById")
+            .AllowAnonymous()
             .Produces<GetWorkoutByIdQueryDTO>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
 
@@ -49,6 +51,7 @@ namespace TrainingService.Workout.EndPoints
                 return Results.Ok(workouts);
             })
             .WithName("GetWorkouts")
+            .AllowAnonymous()
             .Produces<List<GetWorkoutByIdQueryDTO>>(StatusCodes.Status200OK);
 
             // PUT /api/workouts/{id} - Update Workout (guarded by AC 05)
@@ -91,6 +94,7 @@ namespace TrainingService.Workout.EndPoints
                 }
             })
             .WithName("UpdateWorkout")
+            .RequireAuthorization("AdminOnly")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status404NotFound)
@@ -124,6 +128,7 @@ namespace TrainingService.Workout.EndPoints
                 }
             })
             .WithName("DeleteWorkout")
+            .RequireAuthorization("AdminOnly")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .Produces<ProblemDetails>(StatusCodes.Status409Conflict);

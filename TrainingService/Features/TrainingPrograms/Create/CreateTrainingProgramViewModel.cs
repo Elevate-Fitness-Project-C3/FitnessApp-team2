@@ -1,12 +1,14 @@
-﻿using static TrainingService.TrainingProgram.Enums.Enums;
+using static TrainingService.TrainingProgram.Enums.Enums;
 
 namespace TrainingService.TrainingProgram.ViewModels
 {
     public class CreateTrainingProgramViewModel
     {
-        public string Goal { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string Level { get; set; } 
+        public string Goal { get; set; } = string.Empty;
+
+        public string Level { get; set; } = string.Empty;
 
         public int DurationWeeks { get; set; }
 
@@ -14,8 +16,8 @@ namespace TrainingService.TrainingProgram.ViewModels
 
         public AccessTier AccessTier { get; set; }
 
-        public string Description { get; set; } 
+        public string Description { get; set; } = string.Empty;
 
-        public ProgramStatus Status { get; set; }
+        public ProgramStatus Status { get; set; } = ProgramStatus.Draft;
     }
 }

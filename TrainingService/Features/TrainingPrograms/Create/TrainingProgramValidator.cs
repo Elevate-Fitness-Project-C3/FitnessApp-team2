@@ -9,9 +9,15 @@ namespace TrainingService.TrainingProgram.Validation
         {
             var errors = new Dictionary<string, string[]>();
 
+            AddRequiredError(errors, nameof(request.Title), request.Title, "Title is required.");
             AddRequiredError(errors, nameof(request.Goal), request.Goal, "Goal is required.");
             AddRequiredError(errors, nameof(request.Level), request.Level, "Level is required.");
             AddRequiredError(errors, nameof(request.Description), request.Description, "Description is required.");
+
+            if (!string.IsNullOrWhiteSpace(request.Title) && request.Title.Length > 200)
+            {
+                errors[nameof(request.Title)] = ["Title cannot exceed 200 characters."];
+            }
 
             if (request.DurationWeeks <= 0)
             {

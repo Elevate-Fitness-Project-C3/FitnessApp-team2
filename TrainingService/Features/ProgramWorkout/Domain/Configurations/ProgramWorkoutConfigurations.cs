@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace TrainingService.Features.ProgramWorkout.Domain.Configurations
 {
@@ -22,8 +22,9 @@ namespace TrainingService.Features.ProgramWorkout.Domain.Configurations
                 .IsRequired();
 
             builder.HasOne(pw => pw.Program)
-                .WithMany()
-                .HasForeignKey(pw => pw.ProgramId);
+                .WithMany(p => p.ProgramWorkouts)
+                .HasForeignKey(pw => pw.ProgramId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(pw => pw.Workout)
                 .WithMany()

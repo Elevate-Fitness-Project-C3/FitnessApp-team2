@@ -1,14 +1,17 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using TrainingService.Data;
+using TrainingService.Features.Exercises;
+using TrainingService.Features.ProgramWorkout.Create;
 using TrainingService.Infrastructure.Repositories.Classes;
 using TrainingService.Repositories.Interfaces;
 using TrainingService.TrainingProgram.EndPoints;
 using TrainingService.Workout.EndPoints;
-using TrainingService.Features.ProgramWorkout.Create;
-using TrainingService.Features.Exercises;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +57,68 @@ builder.Services.AddMediatR(typeof(Program).Assembly);
 // Register FluentValidation validators
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// TODO: [ID-06] Add Authentication & Authorization
+// Configure JWT Authentication & Authorization
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var secretKey = builder.Configuration["JWT_SECRET_KEY"]
+    ?? (!string.IsNullOrWhiteSpace(jwtSection["SecretKey"]) ? jwtSection["SecretKey"] : null);
+
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+    // Read from root .env file if running in local development
+    var rootDir = Directory.GetParent(builder.Environment.ContentRootPath)?.FullName ?? builder.Environment.ContentRootPath;
+    var envFile = Path.Combine(rootDir, ".env");
+    if (File.Exists(envFile))
+    {
+        foreach (var line in File.ReadAllLines(envFile))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("JWT_SECRET_KEY=", StringComparison.OrdinalIgnoreCase))
+            {
+                secretKey = trimmed["JWT_SECRET_KEY=".Length..].Trim();
+                break;
+            }
+        }
+    }
+}
+
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+    throw new InvalidOperationException("Jwt:SecretKey configuration or JWT_SECRET_KEY environment variable is missing.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSection["Issuer"] ?? "fittnesservices",
+
+            ValidateAudience = true,
+            ValidAudience = jwtSection["Audience"] ?? "angular",
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+
+            RoleClaimType = "roles",
+            NameClaimType = "sub"
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireAssertion(context =>
+        context.User.IsInRole("Admin") ||
+        context.User.HasClaim(c => (c.Type == "roles" || c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role) && c.Value == "Admin")));
+
+    options.AddPolicy("PremiumOnly", policy => policy.RequireAssertion(context =>
+        context.User.IsInRole("Premium") ||
+        context.User.HasClaim(c => (c.Type == "roles" || c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role) && c.Value == "Premium")));
+});
 
 var app = builder.Build();
 
@@ -79,6 +143,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

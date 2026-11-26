@@ -15,12 +15,12 @@ public static class ExerciseEndpoints
         var group = app.MapGroup("/api/v1/exercises")
             .WithTags("Exercises");
 
-        // Feature slices
-        group.MapCreateExercise();
-        group.MapGetExercises();
-        group.MapGetExerciseById();
-        group.MapUpdateExercise();
-        group.MapDeactivateExercise();
+        // Feature slices - Admin only for mutations, Anonymous for catalog queries
+        group.MapCreateExercise().RequireAuthorization("AdminOnly");
+        group.MapGetExercises().AllowAnonymous();
+        group.MapGetExerciseById().AllowAnonymous();
+        group.MapUpdateExercise().RequireAuthorization("AdminOnly");
+        group.MapDeactivateExercise().RequireAuthorization("AdminOnly");
 
         return app;
     }

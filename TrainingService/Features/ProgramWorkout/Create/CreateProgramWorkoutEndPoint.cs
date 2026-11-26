@@ -1,4 +1,4 @@
-﻿namespace TrainingService.Features.ProgramWorkout.Create;
+namespace TrainingService.Features.ProgramWorkout.Create;
 
 public static class CreateProgramWorkoutEndPoint
 {
@@ -31,6 +31,7 @@ public static class CreateProgramWorkoutEndPoint
             }
         })
         .WithName("CreateProgramWorkout")
-        .WithTags("ProgramWorkouts");
+        .WithTags("ProgramWorkouts")
+        .RequireAuthorization("AdminOnly");
     }
 }
