@@ -362,6 +362,11 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.idea/
 # Local development credentials
 /.env
 /IdentityService/appsettings.Local.json
