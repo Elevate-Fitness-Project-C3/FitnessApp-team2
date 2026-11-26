@@ -1,11 +1,7 @@
-using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Seeding;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using IdentityService.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using IdentityService.Features.Register.Endpoints;
-using IdentityService.Features.Login.Endpoints;
-
 using IdentityService.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,23 +30,18 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-if (app.Environment.IsDevelopment())
-{
-    await using var scope = app.Services.CreateAsyncScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.EnsureCreatedAsync();
-    await db.ApplyLoginSchemaAsync();
-    await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
-}
-
 
 app.UseRouting();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRegisterEndpoint();
-app.MapLoginEndpoint();
-app.MapRefreshEndpoint();
+
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await IdentitySeeder.SeedRolesAsync(roleManager);
+}
 
 app.Run();
