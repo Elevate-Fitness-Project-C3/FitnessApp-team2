@@ -32,7 +32,6 @@ public sealed class RegisterOrchestrator
             return RequestResponse<RegisterViewModel>.Fail("Invalid registration details.", errors: errors);
 
         var email = command.Email.Trim();
-        string userId = null!;
         SendVerificationEmailNotification verificationEmail = null!;
         var lookup = await _mediator.Send(new EmailExistsQuery(email), cancellationToken);
 
@@ -43,44 +42,47 @@ public sealed class RegisterOrchestrator
         }
 
 
-        try
+        if (lookup.Data!.Exists)
+            return RequestResponse<RegisterViewModel>.Fail("Email is already registered.",
+                StatusCodes.Status409Conflict, errorCode: "email_already_registered");
+
+        var result = await _unitOfWork.ExecuteAsync(async () =>
         {
-            await _unitOfWork.ExecuteAsync(async () =>
+            var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password), cancellationToken);
+
+            if (!user.Success)
             {
-                var user = await _mediator.Send(new CreateUserCommand(command.Name, email, command.Password), cancellationToken);
+                return RequestResponse<RegisterViewModel>.Fail(user.Message, user.StatusCode, user.Errors, user.ErrorCode);
+            }
 
-                if (!user.Success)
-                {
-                    throw new RegistrationFailedException(user.Message, user.StatusCode, user.Errors, user.ErrorCode);
-                }
+            var userId = user.Data!.UserId;
 
-                userId = user.Data!.UserId;
+            var role = await _mediator.Send(new AssignUserRoleCommand(userId), cancellationToken);
 
-                var role = await _mediator.Send(new AssignUserRoleCommand(userId), cancellationToken);
+            if (!role.Success)
+            {
+                return RequestResponse<RegisterViewModel>.Fail(role.Message, role.StatusCode, role.Errors, role.ErrorCode);
+            }
 
-                if (!role.Success)
-                {
-                    throw new RegistrationFailedException(role.Message, role.StatusCode, role.Errors, role.ErrorCode);
-                }
+            var otp = await _mediator.Send(new CreateEmailVerificationCodeCommand(userId), cancellationToken);
 
-                var otp = await _mediator.Send(new CreateEmailVerificationCodeCommand(userId), cancellationToken);
+            if (!otp.Success)
+            {
+                return RequestResponse<RegisterViewModel>.Fail(otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
+            }
 
-                if (!otp.Success)
-                {
-                    throw new RegistrationFailedException(otp.Message, otp.StatusCode, otp.Errors, otp.ErrorCode);
-                }
+            var code = otp.Data!;
+            verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
 
-                var code = otp.Data!;
-                verificationEmail = new SendVerificationEmailNotification(email, code.Code, code.ExpiresAtUtc);
+            await _publisher.Publish(new UserRegistered(userId), cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await _publisher.Publish(new UserRegistered(userId), cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-            }, cancellationToken);
-        }
-        catch (RegistrationFailedException ex)
-        {
-            return ex.Result;
-        }
+            return RequestResponse<RegisterViewModel>.Ok(new RegisterViewModel(userId, email, false, "pending"),
+                "Your account was created.", StatusCodes.Status201Created);
+        }, cancellationToken);
+
+        if (!result.Success)
+            return result;
 
         try
         {
@@ -93,18 +95,6 @@ public sealed class RegisterOrchestrator
                 StatusCodes.Status503ServiceUnavailable, errorCode: "verification_email_failed");
         }
 
-        return RequestResponse<RegisterViewModel>.Ok(new RegisterViewModel(userId, email, false, "pending"),
-            "Your account was created.",
-            StatusCodes.Status201Created);
+        return result;
     }
-
-    private sealed class RegistrationFailedException(
-        string message,
-        int statusCode,
-        IDictionary<string, string[]>? errors,
-        string? errorCode) : Exception(message)
-    {
-        public RequestResponse<RegisterViewModel> Result { get; } = RequestResponse<RegisterViewModel>.Fail(message, statusCode, errors, errorCode);
-    }
-
 }

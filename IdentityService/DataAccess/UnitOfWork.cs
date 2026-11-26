@@ -1,3 +1,4 @@
+using IdentityService.Common.ResultPattern;
 using IdentityService.DataAccess.Context;
 
 namespace IdentityService.DataAccess;
@@ -10,7 +11,7 @@ public sealed class UnitOfWork(ApplicationDbContext db)
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         db.SaveChangesAsync(cancellationToken);
 
-    public async Task ExecuteAsync(Func<Task> action, CancellationToken cancellationToken = default)
+    public async Task<RequestResponse<T>> ExecuteAsync<T>(Func<Task<RequestResponse<T>>> action, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(action);
         var isOuter = depth == 0;
@@ -21,28 +22,19 @@ public sealed class UnitOfWork(ApplicationDbContext db)
 
         try
         {
-            await action();
-            if (isOuter)
-            {
-                if (rollbackOnly)
-                    throw new InvalidOperationException("A nested operation failed. The transaction must roll back.");
+            var result = await action();
+            rollbackOnly |= !result.Success;
+            if (isOuter && rollbackOnly && result.Success)
+                return RequestResponse<T>.Fail("A nested operation failed.", StatusCodes.Status500InternalServerError);
+
+            if (isOuter && !rollbackOnly)
                 await transaction!.CommitAsync(cancellationToken);
-            }
+
+            return result;
         }
         catch
         {
             rollbackOnly = true;
-            if (isOuter)
-            {
-                try
-                {
-                    await transaction!.RollbackAsync(CancellationToken.None);
-                }
-                finally
-                {
-                    db.ChangeTracker.Clear();
-                }
-            }
             throw;
         }
         finally
@@ -52,11 +44,15 @@ public sealed class UnitOfWork(ApplicationDbContext db)
             {
                 try
                 {
-                    await transaction!.DisposeAsync();
+                    if (rollbackOnly)
+                        await transaction!.RollbackAsync(CancellationToken.None);
                 }
                 finally
                 {
+                    if (rollbackOnly)
+                        db.ChangeTracker.Clear();
                     rollbackOnly = false;
+                    await transaction!.DisposeAsync();
                 }
             }
         }
