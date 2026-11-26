@@ -16,7 +16,7 @@ public sealed record CheckLoginCredentialsCommand(string Email, string Password)
             var user = await users.FindByEmailAsync(command.Email);
             if (user is null || !user.IsEnabled || !user.EmailConfirmed || await users.IsLockedOutAsync(user))
             {
-                users.PasswordHasher.HashPassword(user!, command.Password);
+                users.PasswordHasher.HashPassword(user ?? new ApplicationUser { FullName = "Dummy" }, command.Password);
                 return null;
             }
 
