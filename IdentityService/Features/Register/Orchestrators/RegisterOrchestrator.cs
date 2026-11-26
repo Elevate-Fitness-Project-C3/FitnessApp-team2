@@ -27,13 +27,10 @@ public sealed class RegisterOrchestrator
 
     public async Task<RequestResponse<RegisterViewModel>> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
-        var errors = RegisterValidator.Validate(command);
-        if (errors.Count > 0)
-            return RequestResponse<RegisterViewModel>.Fail("Invalid registration details.", errors: errors);
-
         var email = command.Email.Trim();
         string userId = null!;
         SendVerificationEmailNotification verificationEmail = null!;
+
         var lookup = await _mediator.Send(new EmailExistsQuery(email), cancellationToken);
 
         if (!lookup.Success)
@@ -41,7 +38,9 @@ public sealed class RegisterOrchestrator
             return RequestResponse<RegisterViewModel>.Fail(
                 lookup.Message, lookup.StatusCode, lookup.Errors, lookup.ErrorCode);
         }
-
+        if (lookup.Data!.Exists)
+            return RequestResponse<RegisterViewModel>.Fail("Email is already registered.",
+                StatusCodes.Status409Conflict, errorCode: "email_already_registered");
 
         try
         {
