@@ -1,5 +1,4 @@
-﻿using FitnessProfileService.Common.Commands;
-using FitnessProfileService.Common.Responses;
+﻿using FitnessProfileService.Common.Responses;
 using FitnessProfileService.Domain.Contracts;
 using FitnessProfileService.Domain.Entities;
 using FitnessProfileService.Features.CreateFitnessProfile.Queries;
@@ -14,7 +13,7 @@ namespace FitnessProfileService.Features.CreateFitnessProfile.Handlers
         private readonly IGenericRepository<FitnessProfile> _fitnessProfileRepo;
         private IMediator _mediator;
 
-        public CreateFitnessProfileCommandHandler(IGenericRepository<FitnessProfile>fitnessProfileRepo,
+        public CreateFitnessProfileCommandHandler(IGenericRepository<FitnessProfile> fitnessProfileRepo,
             IMediator mediator)
         {
             _fitnessProfileRepo = fitnessProfileRepo;
@@ -26,21 +25,22 @@ namespace FitnessProfileService.Features.CreateFitnessProfile.Handlers
             CancellationToken cancellationToken)
         {
             // Validate UserId
-            if(request.UserId == Guid.Empty)
+            if (request.UserId == Guid.Empty)
             {
-                return RequestResponse<bool>.Fail("Invalid UserId",400);
+                return RequestResponse<bool>.Fail("Invalid UserId", 400);
             }
             // Check existing profile
-            var checkProfileExistsQuery =await _mediator.Send(new CheckFitnessProfileExistsQuery(request.UserId),cancellationToken);
+            var checkProfileExistsQuery = await _mediator.Send(new CheckFitnessProfileExistsQuery(request.UserId), cancellationToken);
 
-            if (checkProfileExistsQuery is null|| !checkProfileExistsQuery.Success)
+            if (checkProfileExistsQuery is null || !checkProfileExistsQuery.Success)
             {
                 return RequestResponse<bool>.Fail("Failed to check existing profile", 500);
             }
-            if(checkProfileExistsQuery.Data)
+            if (checkProfileExistsQuery.Data)
             {
                 return RequestResponse<bool>.Ok(true, statusCode: 201);
-            };
+            }
+            ;
             // Create profile
             var fitnessProfile = new FitnessProfile
             {
@@ -51,7 +51,7 @@ namespace FitnessProfileService.Features.CreateFitnessProfile.Handlers
             _fitnessProfileRepo.Add(fitnessProfile);
             // Save changes
             await _fitnessProfileRepo.SaveChangesAsync(cancellationToken);
-            return  RequestResponse<bool>.Ok(true,statusCode:201);
+            return RequestResponse<bool>.Ok(true, statusCode: 201);
         }
     }
 }
