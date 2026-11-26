@@ -1,3 +1,4 @@
+using IdentityService.DataAccess.Context;
 using IdentityService.DataAccess.Seeding;
 using IdentityService.DependencyInjection;
 using IdentityService.Features.Login.Endpoints;
@@ -21,6 +22,14 @@ builder.Services.AddRegistrationMessaging(builder.Configuration);
 builder.Services.AddIdentityService(builder.Configuration);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    await IdentitySeeder.InitializeAsync(
+        scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
+        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>(),
+        applyMigrations: true);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
