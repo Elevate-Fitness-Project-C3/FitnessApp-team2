@@ -41,6 +41,8 @@ public sealed class RegisterOrchestrator
                 lookup.Message, lookup.StatusCode, lookup.Errors, lookup.ErrorCode);
         }
 
+        if (lookup.Data!.Exists)
+            return RegistrationErrors.EmailAlreadyRegistered<RegisterViewModel>();
 
         if (lookup.Data!.Exists)
             return RequestResponse<RegisterViewModel>.Fail("Email is already registered.",

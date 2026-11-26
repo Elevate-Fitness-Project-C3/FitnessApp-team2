@@ -1,0 +1,4 @@
+﻿namespace FitnessProfileService.Common.Commands
+{
+   
+}
