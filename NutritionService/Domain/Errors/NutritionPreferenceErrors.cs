@@ -1,4 +1,4 @@
-﻿using NutritionService.Common;
+using NutritionService.Common;
 
 namespace NutritionService.Domain.Errors;
 
@@ -19,4 +19,8 @@ public static class NutritionPreferenceErrors
     public static readonly Error NotFound = new(
         "NutritionPreference.NotFound",
         "No nutrition preference has been saved for this user.");
+
+    public static readonly Error ConcurrentCreate = new(
+        "NutritionPreference.ConcurrentCreate",
+        "A nutrition preference already exists for this user due to a concurrent request.");
 }

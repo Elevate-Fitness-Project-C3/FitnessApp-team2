@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NutritionService.Common.Abstractions;
+using NutritionService.Domain.Errors;
 
 namespace NutritionService.Features.NutritionGoals.SetNutritionGoal;
 
@@ -39,6 +40,15 @@ public static class Endpoint
 
         if (result.IsFailure)
         {
+
+            if (result.Error == NutritionPreferenceErrors.ConcurrentCreate)
+            {
+                return Results.Problem(
+                    title: result.Error.Code,
+                    detail: result.Error.Description,
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
             return Results.Problem(
                 title: result.Error.Code,
                 detail: result.Error.Description,

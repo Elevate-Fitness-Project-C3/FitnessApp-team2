@@ -1,7 +1,10 @@
 using MediatR;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using NutritionService.Common;
 using NutritionService.Common.Abstractions;
 using NutritionService.Domain.Entities;
+using NutritionService.Domain.Errors;
 using NutritionService.Domain.Repositories;
 
 namespace NutritionService.Features.NutritionGoals.SetNutritionGoal;
@@ -56,7 +59,16 @@ public sealed class SetNutritionGoalHandler
             }
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is SqlException sqlEx
+                  && sqlEx.Number is 2601 or 2627)
+        {
+            return Result.Failure(NutritionPreferenceErrors.ConcurrentCreate);
+        }
 
         return Result.Success();
     }
