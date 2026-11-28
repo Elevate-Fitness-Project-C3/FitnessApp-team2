@@ -1,5 +1,7 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using NutritionService.Common.Abstractions;
 using NutritionService.Common.Behaviors;
 using NutritionService.Domain.Repositories;
@@ -7,6 +9,7 @@ using NutritionService.Infrastructure.Authentication;
 using NutritionService.Infrastructure.Identifiers;
 using NutritionService.Persistence;
 using NutritionService.Persistence.Repositories;
+using System.Text;
 
 namespace NutritionService.Extensions;
 
@@ -51,6 +54,44 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ISnowflakeIdGenerator>(
             _ => new SnowflakeIdGenerator(workerId));
+        var jwtSection = configuration.GetRequiredSection("Jwt");
+
+        var secretKey = jwtSection["SecretKey"]
+            ?? throw new InvalidOperationException(
+                "Jwt:SecretKey is required. " +
+                "Set the environment variable Jwt__SecretKey " +
+                "or configure it via user secrets: " +
+                "dotnet user-secrets set \"Jwt:SecretKey\" \"<value>\"");
+
+        var issuer   = jwtSection["Issuer"]   ?? "fittnesservices";
+        var audience = jwtSection["Audience"] ?? "angular";
+
+        services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.MapInboundClaims = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer           = true,
+                    ValidIssuer              = issuer,
+
+                    ValidateAudience         = true,
+                    ValidAudience            = audience,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey         = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(secretKey)),
+
+                    ValidateLifetime         = true,
+                    ClockSkew                = TimeSpan.Zero,
+
+                    NameClaimType            = "sub",
+                    RoleClaimType            = "roles",
+
+                    ValidAlgorithms          = [SecurityAlgorithms.HmacSha256]
+                };
+            });
 
         return services;
     }

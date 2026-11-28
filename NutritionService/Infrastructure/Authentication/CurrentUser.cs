@@ -1,8 +1,11 @@
-﻿using System.Security.Claims;
 using NutritionService.Common.Abstractions;
 
 namespace NutritionService.Infrastructure.Authentication;
 
+/// <summary>
+/// Extracts the authenticated user's identity from the validated JWT claims.
+/// UserId is sourced exclusively from the "sub" claim — never from the request body.
+/// </summary>
 public sealed class CurrentUser : ICurrentUser
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -18,10 +21,9 @@ public sealed class CurrentUser : ICurrentUser
         {
             var user = _httpContextAccessor.HttpContext?.User;
 
-            var userIdValue = user?.FindFirstValue(
-                ClaimTypes.NameIdentifier);
+            var subValue = user?.FindFirst("sub")?.Value;
 
-            return Guid.TryParse(userIdValue, out var userId)
+            return Guid.TryParse(subValue, out var userId)
                 ? userId
                 : null;
         }
